@@ -38,6 +38,10 @@ public class FrontController extends HttpServlet {
             actionMap.put("login", new action.LoginAction());   // "/app/login" で呼び出し
             actionMap.put("logout", new action.LogoutAction()); // "/app/logout" で呼び出し
             
+            // ★第6回のActionを新しく登録！
+            actionMap.put("task/list", new action.TaskListAction()); // "/app/task/list" で呼び出し
+            actionMap.put("task/new", new action.TaskNewAction());   // "/app/task/new" で呼び出し            
+            
             System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions.");
         } catch (Exception e) {
             System.err.println("[ERROR] Initialization failed: " + e.getMessage());
@@ -81,6 +85,19 @@ public class FrontController extends HttpServlet {
             handleNotFound(request, response);
             return;
         }
+        
+        // ★【追加】セッションからフラッシュメッセージを抽出し、リクエストスコープに詰め替える処理
+        javax.servlet.http.HttpSession session = request.getSession(false);
+        if (session != null) {
+            String flashSuccess = (String) session.getAttribute("flash_success");
+            if (flashSuccess != null) {
+                // JSP（list.jspなど）が読み込めるようにrequestにセット
+                request.setAttribute("successMessage", flashSuccess);
+                // 1回表示したら消すためにセッションから削除
+                session.removeAttribute("flash_success");
+                System.out.println("[DEBUG] Flash message transferred to request: " + flashSuccess);
+            }
+        }        
 
         // Actionの実行と画面遷移処理
         try {

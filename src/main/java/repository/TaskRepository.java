@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import model.Task;
 public class TaskRepository extends BaseRepository {
 
     /**
-     * 全てのタスク情報を取得する（次回の一覧画面で大活躍します）
+     * 全てのタスク情報を取得する
      */
     public List<Task> findAll() {
         List<Task> tasks = new ArrayList<>();
@@ -43,7 +44,7 @@ public class TaskRepository extends BaseRepository {
     }
     
     /**
-     * 指定されたユーザーIDに紐づくタスク一覧のみを全件取得する
+     * 指定されたユーザーIDに紐づくタスク一覧のみを、作成日時の降順で全件取得する
      */
     public List<Task> findByUserId(int userId) {
         List<Task> tasks = new ArrayList<>();
@@ -53,10 +54,12 @@ public class TaskRepository extends BaseRepository {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, userId);
+            System.out.println("[DEBUG] Executing findByUserId SQL with userId: " + userId);
+            
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Task task = new Task();
-                    task.setId(rs.getInt("task_id"));
+                    task.setId(rs.getInt("task_id")); // あなたの環境の正確なカラム名「task_id」
                     task.setUserId(rs.getInt("user_id"));
                     task.setTitle(rs.getString("title"));
                     task.setDescription(rs.getString("description"));
@@ -66,6 +69,7 @@ public class TaskRepository extends BaseRepository {
                     tasks.add(task);
                 }
             }
+            System.out.println("[DEBUG] Retrieved " + tasks.size() + " tasks for userId: " + userId);
         } catch (SQLException e) {
             handleSQLException(e, "findByUserId");
         }
@@ -116,7 +120,7 @@ public class TaskRepository extends BaseRepository {
     }
 
     /**
-     * 所有者確認付きのタスク削除（不正なパラメータ書き換えによる他者タスク削除を完全防御）
+     * 所有者確認付きのタスク削除
      */
     public boolean deleteByIdAndUserId(int taskId, int userId) {
         String sql = "DELETE FROM tasks WHERE task_id = ? AND user_id = ?";
@@ -130,6 +134,40 @@ public class TaskRepository extends BaseRepository {
             return affectedRows > 0; // 削除成功ならtrue
         } catch (SQLException e) {
             handleSQLException(e, "deleteByIdAndUserId");
+            return false;
+        }
+    }
+
+    /**
+     * 新規タスクをデータベースに保存し、自動生成されたIDをオブジェクトにセットする
+     */
+    public boolean save(Task task) {
+        String sql = "INSERT INTO tasks (user_id, title, description, status, created_at, updated_at) "
+                   + "VALUES (?, ?, ?, 'NOT_STARTED', NOW(), NOW())";
+        
+        // 既存の getConnection() を使用
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            
+            stmt.setInt(1, task.getUserId());
+            stmt.setString(2, task.getTitle());
+            stmt.setString(3, task.getDescription());
+            
+            int insertedRows = stmt.executeUpdate();
+            boolean success = insertedRows > 0;
+            
+            if (success) {
+                // 自動生成されたタスクID（task_id）を取得してモデルに格納
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        task.setId(generatedKeys.getInt(1));
+                        System.out.println("[DEBUG] Task saved successfully. Generated ID: " + task.getId());
+                    }
+                }
+            }
+            return success;
+        } catch (SQLException e) {
+            handleSQLException(e, "save"); // あなたの共通エラーハンドリングを使用
             return false;
         }
     }
