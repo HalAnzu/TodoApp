@@ -53,6 +53,18 @@ public class Task implements Serializable {
 
     public Timestamp getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+    
+ // 1. フィールドの追加（既存の id や title などの近くに追加してください）
+    private String priority;
+
+    // 2. Getter / Setter メソッドの追加（クラス内の適当な位置、他のGetter/Setterの近くに追加してください）
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
 
     // ユーティリティメソッド
     @Override
@@ -73,8 +85,4 @@ public class Task implements Serializable {
         return Objects.hash(id, userId, title, status);
     }
 
-	public String getPriority() {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
-	}
 }

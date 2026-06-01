@@ -22,7 +22,7 @@
         
         /* エラー表示スタイリング */
         .input-error { border-color: #dc3545 !important; background-color: #fff8f8; }
-        .error-message { color: #dc3545; font-size: 13px; margin-top: 6px; font-weight: bold; }
+        .error-message { color: #dc3545; font-size: 13px; margin-top: 4px; font-weight: bold; display: block; }
         
         .btn-group { display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px; }
         .btn { display: inline-block; padding: 10px 20px; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 4px; cursor: pointer; border: none; transition: background-color 0.2s; }
@@ -42,34 +42,46 @@
         <div class="form-group">
             <label for="title">タイトル<span class="required">（必須）</span></label>
             <input type="text" id="title" name="title" 
-                   class="${not empty errors.title ? 'input-error' : ''}" 
+                   class="${not empty fieldErrors.title ? 'input-error' : ''}" 
                    value="<c:out value='${task.title}'/>" 
                    placeholder="例：買い物に行く">
-            <c:if test="${not empty errors.title}">
-                <div class="error-message"><c:out value="${errors.title}"/></div>
-            </c:if>
+            <c:forEach var="err" items="${fieldErrors.title}">
+                <div class="error-message">⚠️ <c:out value="${err}"/></div>
+            </c:forEach>
         </div>
 
         <div class="form-group">
-            <label for="status">ステータス</label>
-            <select id="status" name="status" class="${not empty errors.status ? 'input-error' : ''}">
-                <option value="NOT_STARTED" ${task.status == 'NOT_STARTED' ? 'selected' : ''}>未着手</option>
-                <option value="IN_PROGRESS" ${task.status == 'IN_PROGRESS' ? 'selected' : ''}>着手中</option>
-                <option value="COMPLETED" ${task.status == 'COMPLETED' ? 'selected' : ''}>完了</option>
+            <label for="status">ステータス<span class="required">（必須）</span></label>
+            <select id="status" name="status" class="${not empty fieldErrors.status ? 'input-error' : ''}">
+                <option value="pending" ${task.status == 'pending' ? 'selected' : ''}>未着手</option>
+                <option value="in_progress" ${task.status == 'in_progress' ? 'selected' : ''}>着手中</option>
+                <option value="completed" ${task.status == 'completed' ? 'selected' : ''}>完了</option>
             </select>
-            <c:if test="${not empty errors.status}">
-                <div class="error-message"><c:out value="${errors.status}"/></div>
-            </c:if>
+            <c:forEach var="err" items="${fieldErrors.status}">
+                <div class="error-message">⚠️ <c:out value="${err}"/></div>
+            </c:forEach>
+        </div>
+
+        <div class="form-group">
+            <label for="priority">優先度<span class="required">（必須）</span></label>
+            <select id="priority" name="priority" class="${not empty fieldErrors.priority ? 'input-error' : ''}">
+                <option value="low" ${task.priority == 'low' ? 'selected' : ''}>低</option>
+                <option value="medium" ${task.priority == 'medium' || empty task.priority ? 'selected' : ''}>中</option>
+                <option value="high" ${task.priority == 'high' ? 'selected' : ''}>高</option>
+            </select>
+            <c:forEach var="err" items="${fieldErrors.priority}">
+                <div class="error-message">⚠️ <c:out value="${err}"/></div>
+            </c:forEach>
         </div>
 
         <div class="form-group">
             <label for="description">説明<span class="text-muted" style="font-size:12px; font-weight:normal; color:#6c757d;">（任意）</span></label>
             <textarea id="description" name="description" rows="5" 
-                      class="${not empty errors.description ? 'input-error' : ''}" 
+                      class="${not empty fieldErrors.description ? 'input-error' : ''}" 
                       placeholder="詳細なメモを入力してください"><c:out value="${task.description}"/></textarea>
-            <c:if test="${not empty errors.description}">
-                <div class="error-message"><c:out value="${errors.description}"/></div>
-            </c:if>
+            <c:forEach var="err" items="${fieldErrors.description}">
+                <div class="error-message">⚠️ <c:out value="${err}"/></div>
+            </c:forEach>
         </div>
 
         <div class="btn-group">

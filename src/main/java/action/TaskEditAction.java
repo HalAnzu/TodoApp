@@ -1,6 +1,7 @@
 package action;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -11,9 +12,10 @@ import javax.servlet.http.HttpSession;
 import model.Task;
 import model.User;
 import repository.TaskRepository;
+import util.ValidationUtil; // ★Step1で作成したUtilをインポート
 
 /**
- * タスクの編集画面表示（GET）および更新処理（POST）を制御するアクション
+ * タスクの編集画面表示（GET）および更新処理（POST）を制御するアクション（バリデーション強化版）
  */
 public class TaskEditAction extends BaseAuthAction {
 
@@ -47,7 +49,6 @@ public class TaskEditAction extends BaseAuthAction {
         if (!taskRepository.isOwner(taskId, loginUser.getId())) {
             System.out.println("[SECURITY WARN] TaskEditAction: ユーザー " + loginUser.getUsername() 
                     + " (ID:" + loginUser.getId() + ") が他人のタスク (ID:" + taskId + ") へ不正アクセスを試みました。");
-            // 他人のタスクを編集しようとした場合は、安全のため一覧へリダイレクト（実務では403エラー画面等への遷移も一般的）
             return "redirect:/app/task/list";
         }
 
@@ -55,13 +56,12 @@ public class TaskEditAction extends BaseAuthAction {
             // ==========================================
             // ① 編集画面の初期表示処理 (GET)
             // ==========================================
-            // データベースから既存のタスク情報を取得
             Task task = taskRepository.findById(taskId);
             if (task == null) {
                 return "redirect:/app/task/list";
             }
 
-            // JSPにタスクデータを渡す
+            // JSPに既存のタスクデータを渡す
             request.setAttribute("task", task);
             return "/WEB-INF/views/task/edit.jsp";
             
@@ -70,43 +70,55 @@ public class TaskEditAction extends BaseAuthAction {
             // ② データベース更新処理 (POST)
             // ==========================================
             
-            // フォームからの入力値を取得
+            // フォームからの入力値を取得（priority を追加）
             String title = request.getParameter("title");
             String description = request.getParameter("description");
             String status = request.getParameter("status");
+            String priority = request.getParameter("priority");
             
             if (title != null) title = title.trim();
             if (description != null) description = description.trim();
+            if (status != null) status = status.trim();
+            if (priority != null) priority = priority.trim();
 
-            // 入力バリデーション（チェック）
-            Map<String, String> errors = new HashMap<>();
+            // 高度なバリデーション（フィールドごとにリストでエラーを管理）
+            Map<String, List<String>> fieldErrors = new HashMap<>();
             
-            if (title == null || title.isEmpty()) {
-                errors.put("title", "タイトルは必須入力です。");
-            } else if (title.length() > 50) {
-                errors.put("title", "タイトルは50文字以内で入力してください。");
+            // 各項目を ValidationUtil で個別にチェック
+            List<String> titleErrors = ValidationUtil.validateTitle(title);
+            if (!titleErrors.isEmpty()) {
+                fieldErrors.put("title", titleErrors);
             }
             
-            if (description != null && description.length() > 200) {
-                errors.put("description", "説明は200文字以内で入力してください。");
+            List<String> descErrors = ValidationUtil.validateDescription(description);
+            if (!descErrors.isEmpty()) {
+                fieldErrors.put("description", descErrors);
             }
             
-            // ステータスの不正値チェック（NOT_STARTED, IN_PROGRESS, COMPLETED のいずれか）
-            if (status == null || (!status.equals("NOT_STARTED") && !status.equals("IN_PROGRESS") && !status.equals("COMPLETED"))) {
-                errors.put("status", "不正なステータスが選択されました。");
+            List<String> statusErrors = ValidationUtil.validateStatus(status);
+            if (!statusErrors.isEmpty()) {
+                fieldErrors.put("status", statusErrors);
+            }
+            
+            List<String> priorityErrors = ValidationUtil.validatePriority(priority);
+            if (!priorityErrors.isEmpty()) {
+                fieldErrors.put("priority", priorityErrors);
             }
 
             // エラーがあった場合は、入力値を保持して編集画面（edit.jsp）に戻す
-            if (!errors.isEmpty()) {
-                System.out.println("[WARN] TaskEditAction: バリデーションエラーを検知しました。");
-                request.setAttribute("errors", errors);
+            if (!fieldErrors.isEmpty()) {
+                System.out.println("[WARN] TaskEditAction: バリデーションエラーを検知しました。エラー項目数: " + fieldErrors.size());
                 
-                // エラー時に入力内容が消えないよう、一時的なタスクオブジェクトを組み立ててJSPに送る
+                // フィールド別のエラーマップをJSPに引き渡す
+                request.setAttribute("fieldErrors", fieldErrors);
+                
+                // エラー時に入力内容が消えないよう、入力値を含んだダミーオブジェクトを組み立ててJSPに送る
                 Task dummyTask = new Task();
                 dummyTask.setId(taskId);
                 dummyTask.setTitle(title);
                 dummyTask.setDescription(description);
                 dummyTask.setStatus(status);
+                dummyTask.setPriority(priority); // 優先度も保持
                 
                 request.setAttribute("task", dummyTask);
                 return "/WEB-INF/views/task/edit.jsp";
@@ -115,10 +127,11 @@ public class TaskEditAction extends BaseAuthAction {
             // エラーがなければ、Taskオブジェクトを更新用に組み立てる
             Task updatedTask = new Task();
             updatedTask.setId(taskId);
-            updatedTask.setUserId(loginUser.getId()); // 所有者IDを設定
+            updatedTask.setUserId(loginUser.getId());
             updatedTask.setTitle(title);
             updatedTask.setDescription(description);
             updatedTask.setStatus(status);
+            updatedTask.setPriority(priority); // 拡張した優先度をセット
 
             // リポジトリを呼び出してUPDATEを実行
             boolean isUpdated = taskRepository.update(updatedTask);
