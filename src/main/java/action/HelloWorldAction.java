@@ -1,39 +1,47 @@
 package action;
 
 import java.io.IOException;
-import java.util.Date;
+import java.util.Date; // ★Dateクラスのインポートを追加
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import controller.Action;
+import model.User;
 
 /**
- * 動作確認用の最初のActionクラス
+ * ログインが必要なメイン画面 (BaseAuthActionを継承することで自動的に保護されます)
  */
-public class HelloWorldAction implements Action { // [cite: 64]
+public class HelloWorldAction extends BaseAuthAction {
 
     @Override
-    public String execute(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException { // [cite: 66]
+    protected String executeAuthenticated(HttpServletRequest request, HttpServletResponse response, User loginUser)
+            throws ServletException, IOException {
+        
+        System.out.println("[BUSINESS LOGIC] Executing HelloWorldAction for user: " + loginUser.getUsername());
         
         // 1. パラメータ処理 (name属性の取得とヌルチェック)
-        String name = request.getParameter("name"); // [cite: 75, 80]
-        String message = "Welcome to TodoApp!"; // 
+        String name = request.getParameter("name");
+        String message = "Welcome to TodoApp!";
         
-        if (name != null && !name.trim().isEmpty()) { // [cite: 82]
-            message = "こんにちは、" + name + " さん！TodoAppへようこそ！"; // [cite: 76, 123]
+        // もしリクエストパラメータにnameがなければ、ログインしたユーザーの名前をデフォルトにする仕様に拡張
+        if (name == null || name.trim().isEmpty()) {
+            name = loginUser.getUsername();
         }
         
+        message = "こんにちは、" + name + " さん！TodoAppへようこそ！";
+        
         // 2. 表示用データの準備とリクエストスコープへのバインド
-        request.setAttribute("message", message); // [cite: 73, 74]
-        request.setAttribute("currentTime", new Date()); // [cite: 69]
-        request.setAttribute("pathInfo", request.getPathInfo()); // [cite: 70]
-        request.setAttribute("userAgent", request.getHeader("User-Agent")); // [cite: 71]
-        request.setAttribute("remoteAddr", request.getRemoteAddr()); // [cite: 72]
+        request.setAttribute("message", message);
+        request.setAttribute("currentTime", new Date());
+        request.setAttribute("pathInfo", request.getPathInfo());
+        request.setAttribute("userAgent", request.getHeader("User-Agent"));
+        request.setAttribute("remoteAddr", request.getRemoteAddr());
+        
+        // 第4回・5回用にログインユーザーオブジェクト自体も渡しておくとJSP側で便利です
+        request.setAttribute("loginUser", loginUser);
         
         // 3. 遷移先JSPのパスを返却
-        return "/WEB-INF/views/hello.jsp"; // [cite: 78, 179]
+        return "/WEB-INF/views/hello.jsp";
     }
 }

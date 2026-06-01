@@ -16,97 +16,110 @@ import action.HelloWorldAction;
 /**
  * 全体のリクエストを統括するフロントコントローラー
  */
-@WebServlet("/app/*") // [cite: 33]
-public class FrontController extends HttpServlet { // [cite: 30]
+@WebServlet("/app/*")
+public class FrontController extends HttpServlet {
     private static final long serialVersionUID = 100L;
 
     // パスとActionの対応を管理するマップ
-    private Map<String, Action> actionMap; // [cite: 36]
+    private Map<String, Action> actionMap;
 
     @Override
-    public void init() throws ServletException { // [cite: 37]
+    public void init() throws ServletException {
         try {
-            actionMap = new HashMap<>(); // [cite: 198]
+            actionMap = new HashMap<>();
             
             // 各種Actionクラスの登録（キー名はパス正規化後の文字列）
-            actionMap.put("hello", new HelloWorldAction()); // [cite: 84, 199]
+            actionMap.put("hello", new HelloWorldAction());
             
             // 今後、Todo機能を追加する際はここに追記します
             // actionMap.put("todoList", new TodoListAction());
-            // ★第4回のActionを新しく登録！
+            
+            // 第4回のActionの登録
             actionMap.put("login", new action.LoginAction());   // "/app/login" で呼び出し
             actionMap.put("logout", new action.LogoutAction()); // "/app/logout" で呼び出し
             
-            
-            System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions."); // [cite: 200]
+            System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions.");
         } catch (Exception e) {
-            System.err.println("[ERROR] Initialization failed: " + e.getMessage()); // [cite: 202]
-            throw new ServletException("Failed to initialize FrontController", e); // [cite: 41, 203]
+            System.err.println("[ERROR] Initialization failed: " + e.getMessage());
+            throw new ServletException("Failed to initialize FrontController", e);
         }
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        processRequest(request, response); // [cite: 43]
+        processRequest(request, response);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        processRequest(request, response); // [cite: 43]
+        processRequest(request, response);
     }
 
     /**
      * GET/POSTの共通リクエスト処理
      */
     private void processRequest(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException { // [cite: 45]
+            throws ServletException, IOException {
         
         // 文字化け防止（リクエストのエンコーディング設定）
-        request.setCharacterEncoding("UTF-8"); // [cite: 188]
+        request.setCharacterEncoding("UTF-8");
         
         // パス情報の取得と正規化
-        String pathInfo = request.getPathInfo(); // [cite: 46]
-        String actionKey = normalizePathInfo(pathInfo); // [cite: 52, 208]
+        String pathInfo = request.getPathInfo();
+        String actionKey = normalizePathInfo(pathInfo);
         
-        System.out.println("[DEBUG] Processing path: " + pathInfo + " -> ActionKey: " + actionKey); // [cite: 209]
+        System.out.println("[DEBUG] Processing path: " + pathInfo + " -> ActionKey: " + actionKey);
 
         // actionMapから該当するActionを取得
-        Action action = actionMap.get(actionKey); // [cite: 48, 211]
+        Action action = actionMap.get(actionKey);
         
         if (action == null) {
             // 該当するActionがない場合は404エラー処理へ
-            System.out.println("[WARN] No action found for path key: " + actionKey); // [cite: 213]
-            handleNotFound(request, response); // [cite: 53, 214]
+            System.out.println("[WARN] No action found for path key: " + actionKey);
+            handleNotFound(request, response);
             return;
         }
 
         // Actionの実行と画面遷移処理
         try {
-            String resultPage = action.execute(request, response); // [cite: 49]
+            String resultPage = action.execute(request, response);
             if (resultPage != null) {
-                handleResult(resultPage, request, response); // [cite: 55]
+                handleResult(resultPage, request, response);
             } else {
-                throw new ServletException("Action returned null path."); // [cite: 175]
+                throw new ServletException("Action returned null path.");
             }
         } catch (Exception e) {
-            System.err.println("[ERROR] Exception during action execution: " + e.getMessage());
-            e.printStackTrace();
-            throw new ServletException("Action execution failed", e); // [cite: 54]
+            System.err.println("[CRITICAL ERROR] Exception during action execution: " + e.getMessage());
+            e.printStackTrace(); // 開発用にコンソールへ詳細を出力
+            
+            // 安全なエラー画面へのフォワード処理（無限ループ防止）
+            try {
+                if (!response.isCommitted()) {
+                    // レスポンスステータスを500に設定
+                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    
+                    // web.xmlを介さず、直接500.jspへ安全にフォワードする
+                    request.getRequestDispatcher("/WEB-INF/views/error/500.jsp").forward(request, response);
+                }
+            } catch (Exception ex) {
+                System.err.println("[FATAL ERROR] エラー画面への遷移自体に失敗しました: " + ex.getMessage());
+            }
+            return;
         }
-    }
+    } // ★←ここ！消失していた processRequest を閉じる波カッコを追加しました
 
     /**
      * パス情報の正規化（先頭・末尾の"/"を除去し、空ならデフォルト値を返す）
      */
-    private String normalizePathInfo(String pathInfo) { // [cite: 52]
-        if (pathInfo == null || pathInfo.equals("/")) { // [cite: 47]
+    private String normalizePathInfo(String pathInfo) {
+        if (pathInfo == null || pathInfo.equals("/")) {
             return "hello"; // デフォルトのアクションキー 
         }
         // 先頭の"/"を削除
         if (pathInfo.startsWith("/")) {
-            pathInfo = pathInfo.substring(1); // [cite: 47]
+            pathInfo = pathInfo.substring(1);
         }
         // 末尾の"/"を削除
         if (pathInfo.endsWith("/")) {
@@ -119,24 +132,31 @@ public class FrontController extends HttpServlet { // [cite: 30]
      * 実行結果に応じた画面遷移（フォワードまたはリダイレクト）
      */
     private void handleResult(String result, HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException { // [cite: 55, 237]
+            throws ServletException, IOException {
         if (result.startsWith("redirect:")) {
             // "redirect:/app/hello" などの場合はリダイレクト処理
             String targetUrl = request.getContextPath() + result.substring("redirect:".length());
             response.sendRedirect(targetUrl);
         } else {
             // 通常のJSPパスの場合はフォワード処理
-            System.out.println("[DEBUG] Forwarding to: " + result); // [cite: 241]
-            RequestDispatcher dispatcher = request.getRequestDispatcher(result); // [cite: 242]
-            dispatcher.forward(request, response); // [cite: 50, 243]
+            System.out.println("[DEBUG] Forwarding to: " + result);
+            RequestDispatcher dispatcher = request.getRequestDispatcher(result);
+            dispatcher.forward(request, response);
         }
     }
 
     /**
-     * 404 Not Found のエラーハンドリング
+     * 404 Not Found のエラーハンドリング（安全な直接フォワード版）
      */
     private void handleNotFound(HttpServletRequest request, HttpServletResponse response) 
-            throws IOException { // [cite: 53]
-        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Requested resource not found in TodoApp."); // [cite: 125, 140]
+            throws ServletException, IOException {
+        
+        if (!response.isCommitted()) {
+            // ステータスコードを404に設定
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            
+            // 直接404.jspへフォワード
+            request.getRequestDispatcher("/WEB-INF/views/error/404.jsp").forward(request, response);
+        }
     }
 }
