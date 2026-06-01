@@ -226,4 +226,82 @@ public class TaskRepository extends BaseRepository {
             return false;
         }
     }
+    
+ // java.sql.SQLException や java.util.List, java.util.ArrayList のインポートがあるか確認してください
+
+    /**
+     * キーワード検索（タスク名での部分一致） ＋ ソート機能
+     */
+    public List<Task> search(int userId, String keyword, String sort) throws SQLException {
+        List<Task> tasks = new ArrayList<>();
+        String sql;
+        
+        // ソート条件（ASC / DESC）によってSQLを分岐
+        if ("ASC".equals(sort)) {
+            sql = "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY created_at ASC";
+        } else {
+            sql = "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY created_at DESC";
+        }
+
+        // try-with-resources文でConnection、PreparedStatementを取得
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            // パラメータの設定（SQLインジェクション対策）
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, "%" + keyword + "%"); // 部分一致検索のために前後に % を結合
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Task task = new Task();
+                    task.setId(rs.getInt("task_id"));
+                    task.setTitle(rs.getString("title"));
+                    task.setDescription(rs.getString("description"));
+                    task.setStatus(rs.getString("status"));
+                    task.setPriority(rs.getString("priority"));
+                    task.setCreatedAt(rs.getTimestamp("created_at"));
+                    task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    task.setUserId(rs.getInt("user_id"));
+                    tasks.add(task);
+                }
+            }
+        }
+        return tasks;
+    }
+
+    /**
+     * 全件検索 ＋ ソート機能（キーワードなしの場合用）
+     */
+    public List<Task> findAllByUserIdWithSort(int userId, String sort) throws SQLException {
+        List<Task> tasks = new ArrayList<>();
+        String sql;
+        
+        if ("ASC".equals(sort)) {
+            sql = "SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at ASC";
+        } else {
+            sql = "SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC";
+        }
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Task task = new Task();
+                    task.setId(rs.getInt("task_id"));
+                    task.setTitle(rs.getString("title"));
+                    task.setDescription(rs.getString("description"));
+                    task.setStatus(rs.getString("status"));
+                    task.setPriority(rs.getString("priority"));
+                    task.setCreatedAt(rs.getTimestamp("created_at"));
+                    task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    task.setUserId(rs.getInt("user_id"));
+                    tasks.add(task);
+                }
+            }
+        }
+        return tasks;
+    }
 }
