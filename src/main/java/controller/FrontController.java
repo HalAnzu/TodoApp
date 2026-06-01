@@ -33,6 +33,10 @@ public class FrontController extends HttpServlet { // [cite: 30]
             
             // 今後、Todo機能を追加する際はここに追記します
             // actionMap.put("todoList", new TodoListAction());
+            // ★第4回のActionを新しく登録！
+            actionMap.put("login", new action.LoginAction());   // "/app/login" で呼び出し
+            actionMap.put("logout", new action.LogoutAction()); // "/app/logout" で呼び出し
+            
             
             System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions."); // [cite: 200]
         } catch (Exception e) {

@@ -69,4 +69,34 @@ public class UserRepository extends BaseRepository {
         }
         return null;
     }
+    
+    /**
+     * ユーザー名（username）をキーにユーザー情報を検索する（ログイン認証用）
+     * @param username 検索対象のユーザー名
+     * @return 一致したUserオブジェクト、存在しない場合はnull
+     */
+    public User findByUsername(String username) {
+        String sql = "SELECT * FROM users WHERE username = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setId(rs.getInt("user_id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPassword(rs.getString("password")); // 認証照合用
+                    user.setEmail(rs.getString("email"));
+                    user.setCreatedAt(rs.getTimestamp("created_at"));
+                    user.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    return user;
+                }
+            }
+        } catch (SQLException e) {
+            handleSQLException(e, "findByUsername");
+        }
+        return null;
+    }
 }
