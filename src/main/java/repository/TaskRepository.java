@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,7 +58,7 @@ public class TaskRepository extends BaseRepository {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Task task = new Task();
-                    task.setId(rs.getInt("task_id")); // あなたの環境の正確なカラム名「task_id」
+                    task.setId(rs.getInt("task_id"));
                     task.setUserId(rs.getInt("user_id"));
                     task.setTitle(rs.getString("title"));
                     task.setDescription(rs.getString("description"));
@@ -74,6 +73,35 @@ public class TaskRepository extends BaseRepository {
             handleSQLException(e, "findByUserId");
         }
         return tasks;
+    }
+
+    /**
+     * 主キー（task_id）で特定のタスクを1件取得する（編集画面の初期表示用）
+     */
+    public Task findById(int taskId) {
+        String sql = "SELECT * FROM tasks WHERE task_id = ?";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, taskId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Task task = new Task();
+                    task.setId(rs.getInt("task_id"));
+                    task.setUserId(rs.getInt("user_id"));
+                    task.setTitle(rs.getString("title"));
+                    task.setDescription(rs.getString("description"));
+                    task.setStatus(rs.getString("status"));
+                    task.setCreatedAt(rs.getTimestamp("created_at"));
+                    task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    return task;
+                }
+            }
+        } catch (SQLException e) {
+            handleSQLException(e, "findById");
+        }
+        return null; // 見つからなかった場合
     }
 
     /**
@@ -120,7 +148,7 @@ public class TaskRepository extends BaseRepository {
     }
 
     /**
-     * 所有者確認付きのタスク削除
+     * 所有者確認付きのタスク削除（不正なパラメータ書き換えによる他者タスク削除を完全防御）
      */
     public boolean deleteByIdAndUserId(int taskId, int userId) {
         String sql = "DELETE FROM tasks WHERE task_id = ? AND user_id = ?";
@@ -131,6 +159,7 @@ public class TaskRepository extends BaseRepository {
             ps.setInt(1, taskId);
             ps.setInt(2, userId);
             int affectedRows = ps.executeUpdate();
+            System.out.println("[DEBUG] TaskRepository.deleteByIdAndUserId: 影響した行数 = " + affectedRows);
             return affectedRows > 0; // 削除成功ならtrue
         } catch (SQLException e) {
             handleSQLException(e, "deleteByIdAndUserId");
@@ -145,9 +174,8 @@ public class TaskRepository extends BaseRepository {
         String sql = "INSERT INTO tasks (user_id, title, description, status, created_at, updated_at) "
                    + "VALUES (?, ?, ?, 'NOT_STARTED', NOW(), NOW())";
         
-        // 既存の getConnection() を使用
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             
             stmt.setInt(1, task.getUserId());
             stmt.setString(2, task.getTitle());
@@ -157,7 +185,6 @@ public class TaskRepository extends BaseRepository {
             boolean success = insertedRows > 0;
             
             if (success) {
-                // 自動生成されたタスクID（task_id）を取得してモデルに格納
                 try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         task.setId(generatedKeys.getInt(1));
@@ -167,7 +194,35 @@ public class TaskRepository extends BaseRepository {
             }
             return success;
         } catch (SQLException e) {
-            handleSQLException(e, "save"); // あなたの共通エラーハンドリングを使用
+            handleSQLException(e, "save");
+            return false;
+        }
+    }
+    
+    /**
+     * 既存のタスク情報を更新する（所有者チェック付き・あなたのテーブル定義に完全最適化）
+     */
+    public boolean update(Task task) {
+        // WHERE句に user_id を含めることで、不正なID書き換え更新を完全に防御
+        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, updated_at = NOW() "
+                   + "WHERE task_id = ? AND user_id = ?";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, task.getTitle());
+            ps.setString(2, task.getDescription());
+            ps.setString(3, task.getStatus());
+            ps.setInt(4, task.getId());
+            ps.setInt(5, task.getUserId());
+            
+            int updatedRows = ps.executeUpdate();
+            System.out.println("[DEBUG] TaskRepository.update: 影響した行数 = " + updatedRows);
+            
+            return updatedRows > 0; // 1行以上更新されていれば成功
+            
+        } catch (SQLException e) {
+            handleSQLException(e, "update");
             return false;
         }
     }

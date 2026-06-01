@@ -40,7 +40,11 @@ public class FrontController extends HttpServlet {
             
             // ★第6回のActionを新しく登録！
             actionMap.put("task/list", new action.TaskListAction()); // "/app/task/list" で呼び出し
-            actionMap.put("task/new", new action.TaskNewAction());   // "/app/task/new" で呼び出し            
+            actionMap.put("task/new", new action.TaskNewAction());   // "/app/task/new" で呼び出し  
+            
+            // ★第7回のActionを新しく登録！
+            actionMap.put("task/edit", new action.TaskEditAction());   // "/app/task/edit" で呼び出し
+            actionMap.put("task/delete", new action.TaskDeleteAction()); // "/app/task/delete" で呼び出し
             
             System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions.");
         } catch (Exception e) {

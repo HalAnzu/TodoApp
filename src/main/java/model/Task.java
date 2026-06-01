@@ -72,4 +72,9 @@ public class Task implements Serializable {
     public int hashCode() {
         return Objects.hash(id, userId, title, status);
     }
+
+	public String getPriority() {
+		// TODO 自動生成されたメソッド・スタブ
+		return null;
+	}
 }
