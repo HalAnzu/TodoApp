@@ -426,4 +426,46 @@ public class TaskRepository extends BaseRepository {
             return updatedRows == 1;
         }
     }
+    
+    /**
+     * 指定されたタスクを同じユーザー用として複製（コピー）する
+     * @param originalTaskId 複製元のタスクID
+     * @param userId ログインユーザーのID（所有者チェック用）
+     * @return 複製成功ならtrue、失敗ならfalse
+     */
+    public boolean copyTask(int originalTaskId, int userId) throws SQLException {
+        // 1) 元のタスクを取得
+        Task original = findById(originalTaskId);
+        
+        // 2) 存在チェック & 所有者チェック（他人のタスクの複製を完全にブロック）
+        if (original == null || original.getUserId() != userId) {
+            System.out.println("[WARN] Copy failed: Task not found or unauthorized.");
+            return false;
+        }
+        
+        // 3) 仕様に基づく複製データの準備
+        // タイトルの先頭に固定の接頭辞「コピー - 」を付与
+        String copyTitle = "コピー - " + original.getTitle();
+        
+        // ステータスは常に 'pending'、優先度は常に 'low'/'medium'/'high' のうち 'medium' で固定
+        String sql = "INSERT INTO tasks (user_id, title, description, status, priority, is_favorite, created_at, updated_at) "
+                   + "VALUES (?, ?, ?, 'pending', 'medium', false, NOW(), NOW())";
+        
+        // 4) データベースへのインサート実行
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setInt(1, userId);
+            ps.setString(2, copyTitle);
+            ps.setString(3, original.getDescription()); // 説明文はそのまま引き継ぐ
+            
+            int insertedRows = ps.executeUpdate();
+            System.out.println("[DEBUG] TaskRepository.copyTask: 影響した行数 = " + insertedRows);
+            
+            return insertedRows > 0;
+        } catch (SQLException e) {
+            handleSQLException(e, "copyTask");
+            return false;
+        }
+    }
 }

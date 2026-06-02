@@ -57,6 +57,10 @@
         .fav-active { color: #ffc107; }   /* お気に入りON：輝く黄色 ★ */
         .fav-inactive { color: #ccc; }  /* お気に入りOFF：落ち着いたグレー ☆ */
         .fav-inactive:hover { color: #ffda6a; }
+        
+        /* 複製ボタンのスタイル設定_追加機能 02 タスクコピー機能 */
+		.btn-copy { background-color: #17a2b8; color: #fff; padding: 5px 10px; font-size: 12px; border-radius: 4px; text-decoration: none; font-weight: bold; }
+		.btn-copy:hover { background-color: #138496; color: #fff; }
 
         /* ステータスバッジ */
         .badge { display: inline-block; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 12px; text-align: center; }
@@ -179,15 +183,19 @@
                                     </c:otherwise>
                                 </c:choose>
                             </td>
-                            <td class="action-cell">
-                                <a href="${pageContext.request.contextPath}/app/task/edit?id=${task.id}" class="btn btn-edit">編集</a>
-                                
-                                <form action="${pageContext.request.contextPath}/app/task/delete" method="POST" class="inline-form" 
-                                      onsubmit="return confirmDelete('<c:out value="${task.title}"/>');">
-                                    <input type="hidden" name="id" value="${task.id}">
-                                    <button type="submit" class="btn btn-delete">削除</button>
-                                </form>
-                            </td>
+							<td class="action-cell">
+							    <a href="${pageContext.request.contextPath}/app/task/copy?id=${task.id}" 
+							       class="btn btn-copy"
+							       onclick="return confirm('「<c:out value="${task.title}"/>」を複製しますか？');">複製</a>
+							
+							    <a href="${pageContext.request.contextPath}/app/task/edit?id=${task.id}" class="btn btn-edit">編集</a>
+							    
+							    <form action="${pageContext.request.contextPath}/app/task/delete" method="POST" class="inline-form" 
+							          onsubmit="return confirmDelete('<c:out value="${task.title}"/>');">
+							        <input type="hidden" name="id" value="${task.id}">
+							        <button type="submit" class="btn btn-delete">削除</button>
+							    </form>
+							</td>
                         </tr>
                     </c:forEach>
                 </tbody>

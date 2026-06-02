@@ -46,7 +46,9 @@ public class FrontController extends HttpServlet {
             actionMap.put("task/edit", new action.TaskEditAction());   // "/app/task/edit" で呼び出し
             actionMap.put("task/delete", new action.TaskDeleteAction()); // "/app/task/delete" で呼び出し
             
-            actionMap.put("task/toggleFavorite", new action.FavoriteToggleAction()); // ★修正：favoriteOnly フラグを引数に追加）
+            actionMap.put("task/toggleFavorite", new action.FavoriteToggleAction()); // ★修正：favoriteOnly フラグを引数に追加）   
+
+            actionMap.put("task/copy", new action.TaskCopyAction()); // 追加機能 02 タスクコピー機能
             
             System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions.");
         } catch (Exception e) {
