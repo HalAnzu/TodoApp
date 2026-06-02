@@ -171,8 +171,8 @@ public class TaskRepository extends BaseRepository {
      * 新規タスクをデータベースに保存し、自動生成されたIDをオブジェクトにセットする
      */
     public boolean save(Task task) {
-        String sql = "INSERT INTO tasks (user_id, title, description, status, created_at, updated_at) "
-                   + "VALUES (?, ?, ?, 'NOT_STARTED', NOW(), NOW())";
+        String sql = "INSERT INTO tasks (user_id, title, description, status, priority, created_at, updated_at) "
+                   + "VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
         
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
@@ -180,6 +180,8 @@ public class TaskRepository extends BaseRepository {
             stmt.setInt(1, task.getUserId());
             stmt.setString(2, task.getTitle());
             stmt.setString(3, task.getDescription());
+            stmt.setString(4, task.getStatus());
+            stmt.setString(5, task.getPriority());
             
             int insertedRows = stmt.executeUpdate();
             boolean success = insertedRows > 0;
@@ -204,7 +206,7 @@ public class TaskRepository extends BaseRepository {
      */
     public boolean update(Task task) {
         // WHERE句に user_id を含めることで、不正なID書き換え更新を完全に防御
-        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, updated_at = NOW() "
+        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, updated_at = NOW() "
                    + "WHERE task_id = ? AND user_id = ?";
         
         try (Connection conn = getConnection();
@@ -213,8 +215,9 @@ public class TaskRepository extends BaseRepository {
             ps.setString(1, task.getTitle());
             ps.setString(2, task.getDescription());
             ps.setString(3, task.getStatus());
-            ps.setInt(4, task.getId());
-            ps.setInt(5, task.getUserId());
+            ps.setString(4, task.getPriority());
+            ps.setInt(5, task.getId());
+            ps.setInt(6, task.getUserId());
             
             int updatedRows = ps.executeUpdate();
             System.out.println("[DEBUG] TaskRepository.update: 影響した行数 = " + updatedRows);
