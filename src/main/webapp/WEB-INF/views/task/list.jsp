@@ -13,7 +13,7 @@
         h1 { margin: 0; font-size: 24px; color: #495057; }
         .user-info { font-size: 14px; color: #6c757d; }
         
-        /* 検索・ソート操作バーのスタイリング */
+        /* 検索・ソート操作バー */
         .search-sort-bar { display: flex; justify-content: space-between; align-items: center; background-color: #f1f3f5; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; gap: 15px; }
         .search-form { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
         .search-input { padding: 8px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 4px; width: 280px; box-sizing: border-box; }
@@ -42,11 +42,11 @@
         .btn-logout { background-color: #6c757d; color: #fff; font-size: 12px; padding: 6px 12px; margin-left: 10px; }
         .btn-logout:hover { background-color: #5a6268; }
 
-        .task-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .task-table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 25px; }
         .task-table th, .task-table td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
         .task-table th { background-color: #f8f9fa; color: #495057; font-weight: bold; }
         
-        /* ステータスバッジ (第8回の実装値 pending/in_progress/completed に同期) */
+        /* ステータスバッジ */
         .badge { display: inline-block; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 12px; text-align: center; }
         .badge-status-pending { background-color: #e9ecef; color: #495057; }
         .badge-status-in_progress { background-color: #cce5ff; color: #004085; }
@@ -55,6 +55,14 @@
         .empty-message { text-align: center; color: #868e96; padding: 40px; font-style: italic; font-size: 15px; background: #f8f9fa; border-radius: 6px; border: 1px dashed #dee2e6; }
         .action-cell { display: flex; gap: 8px; align-items: center; }
         .inline-form { margin: 0; padding: 0; display: inline; }
+
+        /* ★ ページング（ナビゲーション）のスタイリング */
+        .pagination-container { display: flex; justify-content: center; align-items: center; margin-top: 10px; }
+        .pagination { display: flex; list-style: none; padding: 0; margin: 0; gap: 5px; }
+        .page-item { display: inline; }
+        .page-link { display: block; padding: 8px 14px; text-decoration: none; color: #007bff; background-color: #fff; border: 1px solid #dee2e6; border-radius: 4px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+        .page-link:hover { background-color: #e9ecef; border-color: #dee2e6; }
+        .page-item.active .page-link { background-color: #007bff; border-color: #007bff; color: #fff; cursor: default; }
     </style>
     <script>
         function confirmDelete(taskTitle) {
@@ -106,7 +114,7 @@
     <c:choose>
         <c:when test="${not empty tasks}">
             <div class="result-count">
-                該当件数: <c:out value="${tasks.size()}"/> 件
+                該当件数: <c:out value="${totalTasks}"/> 件 （<c:out value="${currentPage}"/> / <c:out value="${totalPages}"/> ページ）
             </div>
             
             <table class="task-table">
@@ -152,6 +160,30 @@
                     </c:forEach>
                 </tbody>
             </table>
+
+            <div class="pagination-container">
+                <ul class="pagination">
+                    
+                    <c:if test="${currentPage > 1}">
+                        <li class="page-item">
+                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&page=${currentPage - 1}">前へ</a>
+                        </li>
+                    </c:if>
+
+                    <c:forEach var="i" begin="1" end="${totalPages}">
+                        <li class="page-item ${currentPage == i ? 'active' : ''}">
+                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&page=${i}">${i}</a>
+                        </li>
+                    </c:forEach>
+
+                    <c:if test="${currentPage < totalPages}">
+                        <li class="page-item">
+                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&page=${currentPage + 1}">次へ</a>
+                        </li>
+                    </c:if>
+                    
+                </ul>
+            </div>
         </c:when>
         
         <c:otherwise>

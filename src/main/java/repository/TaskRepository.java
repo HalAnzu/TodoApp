@@ -304,4 +304,95 @@ public class TaskRepository extends BaseRepository {
         }
         return tasks;
     }
+    
+    /**
+     * 検索条件に該当するタスクの総件数を取得する（ページング計算用）
+     */
+    public int countTasks(int userId, String keyword) throws SQLException {
+        int count = 0;
+        // ベースとなるSQL。所有者チェックを徹底
+        String sql = "SELECT COUNT(*) FROM tasks WHERE user_id = ?";
+        
+        // キーワードが指定されている場合は、LIKE条件を動的に追加
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql += " AND title LIKE ?";
+        }
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            
+            // キーワードがある場合のみ、2番目のパラメータをバインド
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                pstmt.setString(2, "%" + keyword + "%");
+            }
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    count = rs.getInt(1);
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * ページング・検索・ソートに対応したタスク取得
+     */
+    public List<Task> searchWithPaging(int userId, String keyword, String sort, int pageSize, int offset) throws SQLException {
+        List<Task> tasks = new ArrayList<>();
+        
+        // 1. ベースSQLの構築
+        String sql = "SELECT * FROM tasks WHERE user_id = ?";
+        
+        // 2. キーワード検索条件の動的追加
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql += " AND title LIKE ?";
+        }
+        
+        // 3. ソート条件の結合（ASC または DESC）
+        if ("ASC".equals(sort)) {
+            sql += " ORDER BY created_at ASC";
+        } else {
+            sql += " ORDER BY created_at DESC";
+        }
+        
+        // 4. ページング条件（LIMIT と OFFSET）の結合 ※順番に注意！
+        sql += " LIMIT ? OFFSET ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            int paramIndex = 1;
+            
+            // 所有者IDのセット
+            pstmt.setInt(paramIndex++, userId);
+            
+            // キーワードがある場合はセット
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                pstmt.setString(paramIndex++, "%" + keyword + "%");
+            }
+            
+            // ページングパラメータのセット（安全な数値バインド）
+            pstmt.setInt(paramIndex++, pageSize);
+            pstmt.setInt(paramIndex++, offset);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Task task = new Task();
+                    task.setId(rs.getInt("task_id"));
+                    task.setTitle(rs.getString("title"));
+                    task.setDescription(rs.getString("description"));
+                    task.setStatus(rs.getString("status"));
+                    task.setPriority(rs.getString("priority"));
+                    task.setCreatedAt(rs.getTimestamp("created_at"));
+                    task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    task.setUserId(rs.getInt("user_id"));
+                    tasks.add(task);
+                }
+            }
+        }
+        return tasks;
+    }
 }
