@@ -40,6 +40,10 @@ public class TaskListAction extends BaseAuthAction {
         if (sort == null || (!sort.equals("ASC") && !sort.equals("DESC"))) {
             sort = "DESC";
         }
+        
+        // ★追加：お気に入り絞り込みフィルターパラメータの取得
+        String favoriteParam = request.getParameter("favoriteOnly");
+        boolean favoriteOnly = "true".equals(favoriteParam);
 
         // 4. ページ番号の安全な数値変換（NumberFormatExceptionの回避とガードルール）
         int currentPage = 1; // デフォルトは1ページ目
@@ -53,45 +57,39 @@ public class TaskListAction extends BaseAuthAction {
         TaskRepository taskRepository = new TaskRepository();
 
         try {
-            // 5. ページング計算に必要な「条件に一致する総件数」をDBから取得
-            int totalTasks = taskRepository.countTasks(loginUser.getId(), keyword);
+            // 5. 総件数の取得（★修正：favoriteOnly フラグを引数に追加）
+            int totalTasks = taskRepository.countTasks(loginUser.getId(), keyword, favoriteOnly);
 
             // 6. 総件数とPAGE_SIZEから「最大ページ数（総ページ数）」を計算
-            // 例: 13件で5件ずつの場合、(13 + 5 - 1) / 5 = 3 ページ となる計算式
             int totalPages = (totalTasks + PAGE_SIZE - 1) / PAGE_SIZE;
             if (totalPages < 1) {
                 totalPages = 1; // データが0件の場合でも総ページ数は最低1にする
             }
 
-            // 現在のページ番号が最大ページ数を超えていた場合の安全補正
-            //if (currentPage > totalPages) {
-            //    currentPage = totalPages;
-            //}
-            
             // 現在のページ番号が最大ページ数を超えていた場合は、1ページ目にリセットする（仕様書のルールに合わせる）
             if (currentPage > totalPages) {
                 currentPage = 1;
             }
 
             // 7. データベースから取得する開始位置（OFFSET）の計算
-            // 1ページ目 -> (1-1)*5 = 0,  2ページ目 -> (2-1)*5 = 5
             int offset = (currentPage - 1) * PAGE_SIZE;
 
-            // 8. ページング対応メソッドで、現在のページに表示すべきタスクのみを取得
-            List<Task> tasks = taskRepository.searchWithPaging(loginUser.getId(), keyword, sort, PAGE_SIZE, offset);
+            // 8. ページング・条件に合致するタスク一覧の取得（★修正：変数名を「tasks」に統一して下のエラーを防止）
+            List<Task> tasks = taskRepository.searchWithPaging(loginUser.getId(), keyword, sort, favoriteOnly, PAGE_SIZE, offset);
 
             // 9. 画面（JSP）へ、ページングの描画に必要な情報をすべて引き渡す
-            request.setAttribute("tasks", tasks);
+            request.setAttribute("tasks", tasks); // 変数名が一致したため、ここでエラーは出なくなります！
             request.setAttribute("keyword", keyword);
             request.setAttribute("sort", sort);
+            request.setAttribute("favoriteOnly", favoriteOnly); // ★追加：現在のフィルター状態を保持
             request.setAttribute("currentPage", currentPage);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("totalTasks", totalTasks);
 
-            System.out.println("[DEBUG] ページング実行: 現在ページ=" + currentPage + "/" + totalPages 
-                    + " (総件数=" + totalTasks + "件, OFFSET=" + offset + ")");
+            System.out.println("[DEBUG] ページング・お気に入り実行: 現在ページ=" + currentPage + "/" + totalPages 
+                    + " (総件数=" + totalTasks + "件, OFFSET=" + offset + ", お気に入り絞り込み=" + favoriteOnly + ")");
 
-            // 10. 一覧画面のパスを戻り値として返す（親クラス・FrontControllerの共通設計ルール）
+            // 10. 一覧画面のパスを戻り値として返す
             return "/WEB-INF/views/task/list.jsp";
 
         } catch (SQLException e) {

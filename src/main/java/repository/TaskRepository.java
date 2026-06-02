@@ -34,6 +34,8 @@ public class TaskRepository extends BaseRepository {
                 task.setStatus(rs.getString("status"));
                 task.setCreatedAt(rs.getTimestamp("created_at"));
                 task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                // ★追加：お気に入り状態のマッピング
+                task.setFavorite(rs.getBoolean("is_favorite"));
                 tasks.add(task);
             }
         } catch (SQLException e) {
@@ -65,6 +67,8 @@ public class TaskRepository extends BaseRepository {
                     task.setStatus(rs.getString("status"));
                     task.setCreatedAt(rs.getTimestamp("created_at"));
                     task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    // ★追加：お気に入り状態のマッピング
+                    task.setFavorite(rs.getBoolean("is_favorite"));
                     tasks.add(task);
                 }
             }
@@ -95,6 +99,8 @@ public class TaskRepository extends BaseRepository {
                     task.setStatus(rs.getString("status"));
                     task.setCreatedAt(rs.getTimestamp("created_at"));
                     task.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    // ★追加：お気に入り状態のマッピング
+                    task.setFavorite(rs.getBoolean("is_favorite"));
                     return task;
                 }
             }
@@ -171,8 +177,9 @@ public class TaskRepository extends BaseRepository {
      * 新規タスクをデータベースに保存し、自動生成されたIDをオブジェクトにセットする
      */
     public boolean save(Task task) {
-        String sql = "INSERT INTO tasks (user_id, title, description, status, priority, created_at, updated_at) "
-                   + "VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
+        // ★修正：新規保存時にも is_favorite カラム（デフォルトfalse）を明示的にインサート対象に含める
+        String sql = "INSERT INTO tasks (user_id, title, description, status, priority, is_favorite, created_at, updated_at) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
         
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
@@ -182,6 +189,7 @@ public class TaskRepository extends BaseRepository {
             stmt.setString(3, task.getDescription());
             stmt.setString(4, task.getStatus());
             stmt.setString(5, task.getPriority());
+            stmt.setBoolean(6, task.isFavorite()); // DTOの状態を反映
             
             int insertedRows = stmt.executeUpdate();
             boolean success = insertedRows > 0;
@@ -202,11 +210,11 @@ public class TaskRepository extends BaseRepository {
     }
     
     /**
-     * 既存のタスク情報を更新する（所有者チェック付き・あなたのテーブル定義に完全最適化）
+     * 既存のタスク情報を更新する（所有者チェック付き）
      */
     public boolean update(Task task) {
-        // WHERE句に user_id を含めることで、不正なID書き換え更新を完全に防御
-        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, updated_at = NOW() "
+        // ★修正：通常の更新処理時にお気に入り状態が上書きされて消えないよう、更新対象に含める
+        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, is_favorite = ?, updated_at = NOW() "
                    + "WHERE task_id = ? AND user_id = ?";
         
         try (Connection conn = getConnection();
@@ -216,13 +224,14 @@ public class TaskRepository extends BaseRepository {
             ps.setString(2, task.getDescription());
             ps.setString(3, task.getStatus());
             ps.setString(4, task.getPriority());
-            ps.setInt(5, task.getId());
-            ps.setInt(6, task.getUserId());
+            ps.setBoolean(5, task.isFavorite());
+            ps.setInt(6, task.getId());
+            ps.setInt(7, task.getUserId());
             
             int updatedRows = ps.executeUpdate();
             System.out.println("[DEBUG] TaskRepository.update: 影響した行数 = " + updatedRows);
             
-            return updatedRows > 0; // 1行以上更新されていれば成功
+            return updatedRows > 0;
             
         } catch (SQLException e) {
             handleSQLException(e, "update");
@@ -230,29 +239,24 @@ public class TaskRepository extends BaseRepository {
         }
     }
     
- // java.sql.SQLException や java.util.List, java.util.ArrayList のインポートがあるか確認してください
-
     /**
-     * キーワード検索（タスク名での部分一致） ＋ ソート機能
+     * キーワード検索（タスク名での部分一致） ＋ ソート機能（第9回互換用）
      */
     public List<Task> search(int userId, String keyword, String sort) throws SQLException {
         List<Task> tasks = new ArrayList<>();
         String sql;
         
-        // ソート条件（ASC / DESC）によってSQLを分岐
         if ("ASC".equals(sort)) {
-            sql = "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY created_at ASC";
+            sql = "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY is_favorite DESC, created_at ASC";
         } else {
-            sql = "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY created_at DESC";
+            sql = "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ? ORDER BY is_favorite DESC, created_at DESC";
         }
 
-        // try-with-resources文でConnection、PreparedStatementを取得
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            // パラメータの設定（SQLインジェクション対策）
             pstmt.setInt(1, userId);
-            pstmt.setString(2, "%" + keyword + "%"); // 部分一致検索のために前後に % を結合
+            pstmt.setString(2, "%" + keyword + "%");
             
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -265,6 +269,7 @@ public class TaskRepository extends BaseRepository {
                     task.setCreatedAt(rs.getTimestamp("created_at"));
                     task.setUpdatedAt(rs.getTimestamp("updated_at"));
                     task.setUserId(rs.getInt("user_id"));
+                    task.setFavorite(rs.getBoolean("is_favorite"));
                     tasks.add(task);
                 }
             }
@@ -273,16 +278,16 @@ public class TaskRepository extends BaseRepository {
     }
 
     /**
-     * 全件検索 ＋ ソート機能（キーワードなしの場合用）
+     * 全件検索 ＋ ソート機能（キーワードなしの場合用、第9回互換用）
      */
     public List<Task> findAllByUserIdWithSort(int userId, String sort) throws SQLException {
         List<Task> tasks = new ArrayList<>();
         String sql;
         
         if ("ASC".equals(sort)) {
-            sql = "SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at ASC";
+            sql = "SELECT * FROM tasks WHERE user_id = ? ORDER BY is_favorite DESC, created_at ASC";
         } else {
-            sql = "SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC";
+            sql = "SELECT * FROM tasks WHERE user_id = ? ORDER BY is_favorite DESC, created_at DESC";
         }
 
         try (Connection conn = getConnection();
@@ -301,6 +306,7 @@ public class TaskRepository extends BaseRepository {
                     task.setCreatedAt(rs.getTimestamp("created_at"));
                     task.setUpdatedAt(rs.getTimestamp("updated_at"));
                     task.setUserId(rs.getInt("user_id"));
+                    task.setFavorite(rs.getBoolean("is_favorite"));
                     tasks.add(task);
                 }
             }
@@ -309,26 +315,28 @@ public class TaskRepository extends BaseRepository {
     }
     
     /**
-     * 検索条件に該当するタスクの総件数を取得する（ページング計算用）
+     * 検索条件・お気に入りフィルターに該当するタスクの総件数を取得する（ページング計算用）
      */
-    public int countTasks(int userId, String keyword) throws SQLException {
+    public int countTasks(int userId, String keyword, boolean favoriteOnly) throws SQLException {
         int count = 0;
-        // ベースとなるSQL。所有者チェックを徹底
         String sql = "SELECT COUNT(*) FROM tasks WHERE user_id = ?";
         
-        // キーワードが指定されている場合は、LIKE条件を動的に追加
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += " AND title LIKE ?";
+        }
+        
+        if (favoriteOnly) {
+            sql += " AND is_favorite = true";
         }
 
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setInt(1, userId);
+            int paramIndex = 1;
+            pstmt.setInt(paramIndex++, userId);
             
-            // キーワードがある場合のみ、2番目のパラメータをバインド
             if (keyword != null && !keyword.trim().isEmpty()) {
-                pstmt.setString(2, "%" + keyword + "%");
+                pstmt.setString(paramIndex++, "%" + keyword + "%");
             }
             
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -341,43 +349,44 @@ public class TaskRepository extends BaseRepository {
     }
 
     /**
-     * ページング・検索・ソートに対応したタスク取得
+     * ページング・検索・ソート・お気に入りフィルターに対応したタスク取得（★修正：引数に favoriteOnly を追加）
      */
-    public List<Task> searchWithPaging(int userId, String keyword, String sort, int pageSize, int offset) throws SQLException {
+    public List<Task> searchWithPaging(int userId, String keyword, String sort, boolean favoriteOnly, int pageSize, int offset) throws SQLException {
         List<Task> tasks = new ArrayList<>();
         
-        // 1. ベースSQLの構築
         String sql = "SELECT * FROM tasks WHERE user_id = ?";
         
-        // 2. キーワード検索条件の動的追加
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += " AND title LIKE ?";
         }
         
-        // 3. ソート条件の結合（ASC または DESC）
-        if ("ASC".equals(sort)) {
-            sql += " ORDER BY created_at ASC";
-        } else {
-            sql += " ORDER BY created_at DESC";
+        // ★動的追加：お気に入りフィルターがONの場合の条件
+        if (favoriteOnly) {
+            sql += " AND is_favorite = true";
         }
         
-        // 4. ページング条件（LIMIT と OFFSET）の結合 ※順番に注意！
+        // ★並び替え：お気に入りを最上部に優先表示
+        sql += " ORDER BY is_favorite DESC";
+        
+        if ("ASC".equals(sort)) {
+            sql += ", created_at ASC";
+        } else {
+            sql += ", created_at DESC";
+        }
+        
         sql += " LIMIT ? OFFSET ?";
 
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             int paramIndex = 1;
-            
-            // 所有者IDのセット
             pstmt.setInt(paramIndex++, userId);
             
-            // キーワードがある場合はセット
             if (keyword != null && !keyword.trim().isEmpty()) {
                 pstmt.setString(paramIndex++, "%" + keyword + "%");
             }
             
-            // ページングパラメータのセット（安全な数値バインド）
+            // ★安全なインデックス管理： LIMIT と OFFSET のバインド
             pstmt.setInt(paramIndex++, pageSize);
             pstmt.setInt(paramIndex++, offset);
             
@@ -392,10 +401,29 @@ public class TaskRepository extends BaseRepository {
                     task.setCreatedAt(rs.getTimestamp("created_at"));
                     task.setUpdatedAt(rs.getTimestamp("updated_at"));
                     task.setUserId(rs.getInt("user_id"));
+                    task.setFavorite(rs.getBoolean("is_favorite")); // データベースの値をマッピング
                     tasks.add(task);
                 }
             }
         }
         return tasks;
+    }
+    
+    /**
+     * 指定されたタスクのお気に入り状態（true/false）を更新する（セキュリティ用の所有者チェック付き）
+     */
+    public boolean toggleFavorite(int taskId, int userId, boolean isFavorite) throws SQLException {
+        String sql = "UPDATE tasks SET is_favorite = ? WHERE task_id = ? AND user_id = ?";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setBoolean(1, isFavorite);
+            pstmt.setInt(2, taskId);
+            pstmt.setInt(3, userId);
+            
+            int updatedRows = pstmt.executeUpdate();
+            return updatedRows == 1;
+        }
     }
 }

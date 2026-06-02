@@ -84,5 +84,23 @@ public class Task implements Serializable {
     public int hashCode() {
         return Objects.hash(id, userId, title, status);
     }
+    
+ // --- 追加フィールド ---
+    private boolean isFavorite; // お気に入りフラグ [cite: 306]
+
+    // --- 追加 Getter / Setter ---
+    /**
+     * お気に入り状態であるかを取得します（Boolean型の命名規則に準拠）
+     */
+    public boolean isFavorite() { // 
+        return isFavorite;
+    }
+
+    /**
+     * お気に入り状態を設定します
+     */
+    public void setFavorite(boolean isFavorite) {
+        this.isFavorite = isFavorite;
+    }
 
 }
