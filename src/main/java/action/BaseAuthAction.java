@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import controller.Action;
 import model.User;
+import repository.TaskRepository; // ★共通処理で利用するためインポートを追加
 import util.AuthUtil;
 import util.ErrorUtil;
 
@@ -50,4 +51,19 @@ public abstract class BaseAuthAction implements Action {
             HttpServletRequest request, 
             HttpServletResponse response, 
             User loginUser) throws ServletException, IOException;
+
+    /**
+     * ★共通化メソッド：画面のドロップダウンやチップ表示に必要なカテゴリ統計情報をリクエストにセットする
+     * 子クラス（TaskListAction, TaskNewAction, TaskEditActionなど）から1行で呼び出せます。
+     */
+    protected void setupCategoryDropdown(HttpServletRequest request, TaskRepository taskRepository, User loginUser) {
+        try {
+            java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+            request.setAttribute("categoryStats", categoryStats);
+            System.out.println("[DEBUG] [共通処理] カテゴリ統計数をJSPに渡しました。件数 = " + (categoryStats != null ? categoryStats.size() : 0));
+        } catch (java.sql.SQLException e) {
+            System.err.println("[ERROR] [共通処理] カテゴリ統計の取得に失敗しました。");
+            e.printStackTrace();
+        }
+    }
 }

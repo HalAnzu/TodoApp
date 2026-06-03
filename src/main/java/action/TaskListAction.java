@@ -3,7 +3,6 @@ package action;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -14,7 +13,7 @@ import model.User;
 import repository.TaskRepository;
 
 /**
- * タスク一覧 兼 検索・並べ替え・ページング制御アクション
+ * タスク一覧 兼 検索・並べ替え・ページング制御アクション（カテゴリ機能拡張・共通リファクタリング版）
  */
 public class TaskListAction extends BaseAuthAction {
 
@@ -25,12 +24,12 @@ public class TaskListAction extends BaseAuthAction {
     protected String executeAuthenticated(HttpServletRequest request, HttpServletResponse response, User loginUser)
             throws ServletException, IOException {
 
-        // 1. 画面からのパラメータ（検索・ソート・ページ番号）の取得
+        // 1. 画面からのパラメータ（検索・ソート・ページ番号・カテゴリ）の取得
         String keyword = request.getParameter("keyword");
         String sort = request.getParameter("sort");
         String pageParam = request.getParameter("page");
         
-     // カテゴリ絞り込み用のパラメータを取得
+        // カテゴリ絞り込み用のパラメータを取得
         String selectedCategory = request.getParameter("category");
         if (selectedCategory != null) {
             selectedCategory = selectedCategory.trim();
@@ -48,7 +47,7 @@ public class TaskListAction extends BaseAuthAction {
             sort = "DESC";
         }
         
-        // ★追加：お気に入り絞り込みフィルターパラメータの取得
+        // ★お気に入り絞り込みフィルターパラメータの取得
         String favoriteParam = request.getParameter("favoriteOnly");
         boolean favoriteOnly = "true".equals(favoriteParam);
 
@@ -64,7 +63,7 @@ public class TaskListAction extends BaseAuthAction {
         TaskRepository taskRepository = new TaskRepository();
 
         try {
-            // 5. 総件数の取得（★修正：favoriteOnly フラグを引数に追加）
+            // 5. 総件数の取得（favoriteOnly, selectedCategory フラグを引数に追加）
             int totalTasks = taskRepository.countTasks(loginUser.getId(), keyword, favoriteOnly, selectedCategory);
 
             // 6. 総件数とPAGE_SIZEから「最大ページ数（総ページ数）」を計算
@@ -81,23 +80,21 @@ public class TaskListAction extends BaseAuthAction {
             // 7. データベースから取得する開始位置（OFFSET）の計算
             int offset = (currentPage - 1) * PAGE_SIZE;
 
-            // 8. ページング・条件に合致するタスク一覧の取得（★修正：変数名を「tasks」に統一して下のエラーを防止）
+            // 8. ページング・条件に合致するタスク一覧の取得
             List<Task> tasks = taskRepository.searchWithPaging(loginUser.getId(), keyword, sort, favoriteOnly, selectedCategory, PAGE_SIZE, offset);
 
             // 9. 画面（JSP）へ、ページングの描画に必要な情報をすべて引き渡す
-            request.setAttribute("tasks", tasks); // 変数名が一致したため、ここでエラーは出なくなります！
+            request.setAttribute("tasks", tasks); 
             request.setAttribute("keyword", keyword);
             request.setAttribute("sort", sort);
-            request.setAttribute("favoriteOnly", favoriteOnly); // ★追加：現在のフィルター状態を保持
+            request.setAttribute("favoriteOnly", favoriteOnly); // 現在のフィルター状態を保持
             request.setAttribute("currentPage", currentPage);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("totalTasks", totalTasks);
             
-            // 画面上部のチップ表示用：カテゴリ別の件数統計を取得
-            Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+            // ★共通化：画面上部のチップ表示用として、親クラスの共通処理からカテゴリ統計情報を一発セット
+            setupCategoryDropdown(request, taskRepository, loginUser);
 
-            // JSP（一覧画面）にデータを引き渡す
-            request.setAttribute("categoryStats", categoryStats);
             request.setAttribute("selectedCategory", selectedCategory); // 現在選択されているカテゴリを保持
 
             System.out.println("[DEBUG] ページング・お気に入り実行: 現在ページ=" + currentPage + "/" + totalPages 

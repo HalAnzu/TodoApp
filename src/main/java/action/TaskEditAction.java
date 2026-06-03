@@ -1,5 +1,6 @@
 package action;
 
+import java.io.IOException; // ★追加：BaseAuthActionのシグネチャに合わせるため必須
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,7 +17,7 @@ import repository.TaskRepository;
 import util.ValidationUtil; // ★Step1で作成したUtilをインポート
 
 /**
- * タスクの編集画面表示（GET）および更新処理（POST）を制御するアクション（カテゴリ機能拡張版）
+ * タスクの編集画面表示（GET）および更新処理（POST）を制御するアクション（カテゴリ機能拡張・共通リファクタリング版）
  */
 public class TaskEditAction extends BaseAuthAction {
 
@@ -26,7 +27,7 @@ public class TaskEditAction extends BaseAuthAction {
     protected String executeAuthenticated(
             HttpServletRequest request, 
             HttpServletResponse response, 
-            User loginUser) throws ServletException {
+            User loginUser) throws ServletException, IOException { // ★IOExceptionを追加
         
         String method = request.getMethod();
         System.out.println("[DEBUG] TaskEditAction: Method = " + method);
@@ -40,7 +41,6 @@ public class TaskEditAction extends BaseAuthAction {
 
         int taskId;
         try {
-            
             taskId = Integer.parseInt(idParam);
         } catch (NumberFormatException e) {
             System.out.println("[WARN] TaskEditAction: 不正なタスクID形式です: " + idParam);
@@ -63,41 +63,32 @@ public class TaskEditAction extends BaseAuthAction {
                 return "redirect:/app/task/list";
             }
 
-            // JSPに既存のタスクデータ（追加した category も内包されています）を渡す
+            // JSPに既存のタスクデータを渡す
             request.setAttribute("task", task);
 
-            // ★追加：編集画面のドロップダウンに過去の既存カテゴリ一覧を表示するために必須の処理
-            try {
-                java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
-                request.setAttribute("categoryStats", categoryStats);
-                System.out.println("[DEBUG] TaskEditAction(GET): 既存カテゴリ数をJSPに渡しました。件数 = " + (categoryStats != null ? categoryStats.size() : 0));
-            } catch (java.sql.SQLException e) {
-                System.err.println("[ERROR] TaskEditAction(GET): カテゴリ統計の取得に失敗しました。");
-                e.printStackTrace();
-            }
+            // ★共通化：親クラスのメソッドを呼び出すだけで、JSPのドロップダウン用データをセット完了
+            setupCategoryDropdown(request, taskRepository, loginUser);
 
             return "/WEB-INF/views/task/edit.jsp";
             
-        }
-        	else if ("POST".equalsIgnoreCase(method)) {
-        		
+        } else if ("POST".equalsIgnoreCase(method)) {
             // ==========================================
             // ② データベース更新処理 (POST)
             // ==========================================
             
-            // フォームからの入力値を取得（★ category を追加）
+            // フォームからの入力値を取得
             String title = request.getParameter("title");
             String description = request.getParameter("description");
             String status = request.getParameter("status");
             String priority = request.getParameter("priority");
-            String category = request.getParameter("category"); // ★追加：カテゴリの取得
+            String category = request.getParameter("category");
             
             if (title != null) title = title.trim();
             if (description != null) description = description.trim();
             if (status != null) status = status.trim();
             if (priority != null) priority = priority.trim();
             
-            // ★追加：カテゴリのトリミングと空文字の null（未分類）化
+            // カテゴリのトリミングと空文字の null（未分類）化
             if (category != null) {
                 category = category.trim();
                 if (category.isEmpty()) {
@@ -108,7 +99,6 @@ public class TaskEditAction extends BaseAuthAction {
             // 高度なバリデーション（フィールドごとにリストでエラーを管理）
             Map<String, List<String>> fieldErrors = new HashMap<>();
             
-            // 各項目を ValidationUtil で個別にチェック
             List<String> titleErrors = ValidationUtil.validateTitle(title);
             if (!titleErrors.isEmpty()) {
                 fieldErrors.put("title", titleErrors);
@@ -129,7 +119,7 @@ public class TaskEditAction extends BaseAuthAction {
                 fieldErrors.put("priority", priorityErrors);
             }
 
-            // ★追加：仕様に基づくバリデーション（カテゴリ50文字超過チェック）
+            // カテゴリ50文字超過チェック
             if (category != null && category.length() > 50) {
                 List<String> categoryErrors = new ArrayList<>();
                 categoryErrors.add("カテゴリ名は50文字以内で入力してください。");
@@ -140,7 +130,6 @@ public class TaskEditAction extends BaseAuthAction {
             if (!fieldErrors.isEmpty()) {
                 System.out.println("[WARN] TaskEditAction: バリデーションエラーを検知しました。エラー項目数: " + fieldErrors.size());
                 
-                // フィールド別のエラーマップをJSPに引き渡す
                 request.setAttribute("fieldErrors", fieldErrors);
                 
                 // エラー時に入力内容が消えないよう、入力値を含んだダミーオブジェクトを組み立ててJSPに送る
@@ -149,19 +138,12 @@ public class TaskEditAction extends BaseAuthAction {
                 dummyTask.setTitle(title);
                 dummyTask.setDescription(description);
                 dummyTask.setStatus(status);
-                dummyTask.setPriority(priority); // 優先度を保持
-                dummyTask.setCategory(category); // ★追加：エラー時も入力されたカテゴリを保持
-                
-             // （省略）既存のエラー処理
+                dummyTask.setPriority(priority);
+                dummyTask.setCategory(category);
                 request.setAttribute("task", dummyTask);
                 
-                // ★追加：バリデーションエラーで画面に戻る際にも、既存カテゴリの選択肢を再セット
-                try {
-                    java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
-                    request.setAttribute("categoryStats", categoryStats);
-                } catch (java.sql.SQLException e) {
-                    e.printStackTrace();
-                }
+                // ★共通化：バリデーションエラーによる押し戻し時も共通メソッドで選択肢を再セット
+                setupCategoryDropdown(request, taskRepository, loginUser);
                 
                 return "/WEB-INF/views/task/edit.jsp";
             }
@@ -173,8 +155,8 @@ public class TaskEditAction extends BaseAuthAction {
             updatedTask.setTitle(title);
             updatedTask.setDescription(description);
             updatedTask.setStatus(status);
-            updatedTask.setPriority(priority); // 拡張した優先度をセット
-            updatedTask.setCategory(category); // ★追加：DTOにカテゴリをセット
+            updatedTask.setPriority(priority);
+            updatedTask.setCategory(category);
 
             // リポジトリを呼び出してUPDATEを実行
             boolean isUpdated = taskRepository.update(updatedTask);
@@ -182,13 +164,11 @@ public class TaskEditAction extends BaseAuthAction {
             if (isUpdated) {
                 System.out.println("[INFO] TaskEditAction: タスクID " + taskId + " の更新に成功しました。カテゴリ: " + category);
                 
-                // PRGパターン：セッションにメッセージを詰めてリダイレクト
                 HttpSession session = request.getSession();
                 session.setAttribute("flash_success", "タスク「" + title + "」を更新しました！");
                 
                 return "redirect:/app/task/list";
-            } 
-            else {
+            } else {
                 throw new ServletException("データベースのタスク更新処理に失敗しました。");
             }
         }
