@@ -1,5 +1,6 @@
 package action;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +16,7 @@ import repository.TaskRepository;
 import util.ValidationUtil; // ★Step1で作成したUtilをインポート
 
 /**
- * 新規タスクの表示（GET）および登録処理（POST）を制御するアクション（バリデーション強化版）
+ * 新規タスクの表示（GET）および登録処理（POST）を制御するアクション（カテゴリ機能拡張版）
  */
 public class TaskNewAction extends BaseAuthAction {
 
@@ -41,17 +42,26 @@ public class TaskNewAction extends BaseAuthAction {
             // ② データベース登録処理 (POST)
             // ==========================================
             
-            // 1. フォームからの入力値を受け取る（status と priority を追加）
+            // 1. フォームからの入力値を受け取る（★ category を追加）
             String title = request.getParameter("title");
             String description = request.getParameter("description");
             String status = request.getParameter("status");
             String priority = request.getParameter("priority");
+            String category = request.getParameter("category"); // ★追加：カテゴリの取得
             
             // 前後の余白（空白）を除去
             if (title != null) title = title.trim();
             if (description != null) description = description.trim();
             if (status != null) status = status.trim();
             if (priority != null) priority = priority.trim();
+            
+            // ★追加：カテゴリのトリミングと空文字の null（未分類）化
+            if (category != null) {
+                category = category.trim();
+                if (category.isEmpty()) {
+                    category = null;
+                }
+            }
 
             // 2. 高度なバリデーション（フィールドごとにリストでエラーを管理）
             Map<String, List<String>> fieldErrors = new HashMap<>();
@@ -77,6 +87,13 @@ public class TaskNewAction extends BaseAuthAction {
                 fieldErrors.put("priority", priorityErrors);
             }
 
+            // ★追加：手順書の仕様に基づくバリデーション（カテゴリ50文字超過チェック）
+            if (category != null && category.length() > 50) {
+                List<String> categoryErrors = new ArrayList<>();
+                categoryErrors.add("カテゴリ名は50文字以内で入力してください。");
+                fieldErrors.put("category", categoryErrors);
+            }
+
             // 3. エラーがあった場合は、入力値をすべて保持してフォーム画面に戻す
             if (!fieldErrors.isEmpty()) {
                 System.out.println("[WARN] TaskNewAction: バリデーションエラーを検知しました。エラー項目数: " + fieldErrors.size());
@@ -84,11 +101,12 @@ public class TaskNewAction extends BaseAuthAction {
                 // フィールド別のエラーマップをJSPに引き渡す
                 request.setAttribute("fieldErrors", fieldErrors);
                 
-                // 入力された値をすべてJSPに送り返す（選択状態・入力値保持機能）
+                // 入力された値をすべてJSPに送り返す（選択状態・入力値保持機能に category も追加）
                 request.setAttribute("title", title);
                 request.setAttribute("description", description);
                 request.setAttribute("status", status);
                 request.setAttribute("priority", priority);
+                request.setAttribute("category", category); // ★追加：入力されたカテゴリを保持
                 
                 return "/WEB-INF/views/task/new.jsp";
             }
@@ -100,11 +118,12 @@ public class TaskNewAction extends BaseAuthAction {
             task.setDescription(description);
             task.setStatus(status);       // 拡張したステータスをセット
             task.setPriority(priority);   // 第8回で拡張する優先度をセット
+            task.setCategory(category);   // ★追加：DTOにカテゴリをセット
 
             boolean isSaved = taskRepository.save(task);
 
             if (isSaved) {
-                System.out.println("[INFO] TaskNewAction: 新規タスク登録成功。");
+                System.out.println("[INFO] TaskNewAction: 新規タスク登録成功。カテゴリ: " + category);
                 
                 // PRGパターン用のフラッシュメッセージ
                 HttpSession session = request.getSession();

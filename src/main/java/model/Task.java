@@ -17,6 +17,7 @@ public class Task implements Serializable {
     private String status;
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    private String category; // タスクのカテゴリ
 
     // 引数なしコンストラクタ
     public Task() {}
@@ -69,7 +70,7 @@ public class Task implements Serializable {
     // ユーティリティメソッド
     @Override
     public String toString() {
-        return "Task{id=" + id + ", userId=" + userId + ", title='" + title + "', status='" + status + "'}";
+        return "Task{id=" + id + ", userId=" + userId + ", title='" + title + "', status='" + status + ", priority=\" + priority + \", category=\" + category + \"'}";
     }
 
     @Override
@@ -101,6 +102,14 @@ public class Task implements Serializable {
      */
     public void setFavorite(boolean isFavorite) {
         this.isFavorite = isFavorite;
+    }
+    
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
 }

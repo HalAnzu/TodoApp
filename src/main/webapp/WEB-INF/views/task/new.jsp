@@ -19,6 +19,11 @@
         }
         input[type="text"]:focus, textarea:focus, select:focus { border-color: #80bdff; outline: none; }
         
+        /* ★追加：カテゴリ用ハイブリッドUIのコンテナ＆テキスト入力欄スタイル */
+        .category-select-wrapper { display: flex; flex-direction: column; gap: 10px; }
+        .new-category-input-group { display: none; margin-top: 5px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
         /* エラー表示スタイリング */
         .input-error { border-color: #dc3545 !important; background-color: #fff8f8; }
         .error-message { color: #dc3545; font-size: 13px; margin-top: 4px; font-weight: bold; display: block; }
@@ -50,6 +55,44 @@
         </div>
 
         <div class="form-group">
+            <label for="categorySelect">カテゴリ<span class="text-muted" style="font-size:12px; font-weight:normal; color:#6c757d;">（任意：50文字以内）</span></label>
+            <div class="category-select-wrapper">
+                
+                <c:set var="isExistingCategory" value="false" />
+                <c:if var="hasCategoryValue" test="${not empty category}">
+                    <c:forEach var="stat" items="${categoryStats}">
+                        <c:if test="${stat.key == category}"><c:set var="isExistingCategory" value="true" /></c:if>
+                    </c:forEach>
+                </c:if>
+
+                <select id="categorySelect" name="category" class="${not empty fieldErrors.category ? 'input-error' : ''}">
+                    <option value="" <c:if test="${empty category}">selected</c:if>>-- 未分類 --</option>
+                    
+                    <c:forEach var="stat" items="${categoryStats}">
+                        <c:if test="${stat.key != '未分類'}">
+                            <option value="<c:out value='${stat.key}'/>" <c:if test="${category == stat.key}">selected</c:if>>
+                                <c:out value="${stat.key}"/>
+                            </option>
+                        </c:if>
+                    </c:forEach>
+                    
+                    <option value="__NEW_CATEGORY__" <c:if test="${hasCategoryValue && !isExistingCategory}">selected</c:if>>（＋新しく入力する）</option>
+                </select>
+
+                <div id="newCategoryGroup" class="new-category-input-group">
+                    <input type="text" id="newCategoryInput" 
+                           class="${not empty fieldErrors.category ? 'input-error' : ''}"
+                           placeholder="新しいカテゴリ名を入力してください" 
+                           value="<c:out value='${!isExistingCategory ? category : \"\"}'/>">
+                </div>
+            </div>
+            
+            <c:forEach var="err" items="${fieldErrors.category}">
+                <div class="error-message">⚠️ <c:out value="${err}"/></div>
+            </c:forEach>
+        </div>
+
+        <div class="form-group">
             <label for="description">説明<span class="text-muted" style="font-size:12px; font-weight:normal; color:#6c757d;">（任意）</span></label>
             <textarea id="description" name="description" rows="5" 
                       class="${not empty fieldErrors.description ? 'input-error' : ''}" 
@@ -59,7 +102,7 @@
             </c:forEach>
         </div>
 
-		<div class="form-group">
+        <div class="form-group">
             <label for="status">ステータス<span class="required">（必須）</span></label>
             <select id="status" name="status" class="${not empty fieldErrors.status ? 'input-error' : ''}">
                 <option value="pending" <c:if test="${empty status || status == 'pending'}">selected</c:if>>未着手</option>
@@ -89,6 +132,37 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const categorySelect = document.getElementById("categorySelect");
+    const newCategoryGroup = document.getElementById("newCategoryGroup");
+    const newCategoryInput = document.getElementById("newCategoryInput");
+
+    function toggleCategoryMode() {
+        if (categorySelect.value === "__NEW_CATEGORY__") {
+            // 「新しく入力する」が選ばれたらテキストボックスを表示
+            newCategoryGroup.style.display = "block";
+            // サーバーへテキストボックスの値を送信するため、name属性をこちらに付与
+            newCategoryInput.name = "category";
+            // 代わりにセレクトボックスのnameを一時的に外す（多重送信の防止）
+            categorySelect.removeAttribute("name");
+        } else {
+            // 既存カテゴリ選択、または未分類の場合はテキストボックスを隠す
+            newCategoryGroup.style.display = "none";
+            // セレクトボックスの値を送信するため、name属性を戻す
+            categorySelect.name = "category";
+            newCategoryInput.removeAttribute("name");
+        }
+    }
+
+    // イベントリスナーの登録（変更時に毎回切り替える）
+    categorySelect.addEventListener("change", toggleCategoryMode);
+
+    // 初期化処理：エラーによる画面戻り時の状態を正しく再現する
+    toggleCategoryMode();
+});
+</script>
 
 </body>
 </html>

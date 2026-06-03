@@ -3,6 +3,7 @@ package action;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -28,6 +29,12 @@ public class TaskListAction extends BaseAuthAction {
         String keyword = request.getParameter("keyword");
         String sort = request.getParameter("sort");
         String pageParam = request.getParameter("page");
+        
+     // カテゴリ絞り込み用のパラメータを取得
+        String selectedCategory = request.getParameter("category");
+        if (selectedCategory != null) {
+            selectedCategory = selectedCategory.trim();
+        }
 
         // 2. 検索キーワードのトリミングと初期値設定
         if (keyword != null) {
@@ -58,7 +65,7 @@ public class TaskListAction extends BaseAuthAction {
 
         try {
             // 5. 総件数の取得（★修正：favoriteOnly フラグを引数に追加）
-            int totalTasks = taskRepository.countTasks(loginUser.getId(), keyword, favoriteOnly);
+            int totalTasks = taskRepository.countTasks(loginUser.getId(), keyword, favoriteOnly, selectedCategory);
 
             // 6. 総件数とPAGE_SIZEから「最大ページ数（総ページ数）」を計算
             int totalPages = (totalTasks + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -75,7 +82,7 @@ public class TaskListAction extends BaseAuthAction {
             int offset = (currentPage - 1) * PAGE_SIZE;
 
             // 8. ページング・条件に合致するタスク一覧の取得（★修正：変数名を「tasks」に統一して下のエラーを防止）
-            List<Task> tasks = taskRepository.searchWithPaging(loginUser.getId(), keyword, sort, favoriteOnly, PAGE_SIZE, offset);
+            List<Task> tasks = taskRepository.searchWithPaging(loginUser.getId(), keyword, sort, favoriteOnly, selectedCategory, PAGE_SIZE, offset);
 
             // 9. 画面（JSP）へ、ページングの描画に必要な情報をすべて引き渡す
             request.setAttribute("tasks", tasks); // 変数名が一致したため、ここでエラーは出なくなります！
@@ -85,6 +92,13 @@ public class TaskListAction extends BaseAuthAction {
             request.setAttribute("currentPage", currentPage);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("totalTasks", totalTasks);
+            
+            // 画面上部のチップ表示用：カテゴリ別の件数統計を取得
+            Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+
+            // JSP（一覧画面）にデータを引き渡す
+            request.setAttribute("categoryStats", categoryStats);
+            request.setAttribute("selectedCategory", selectedCategory); // 現在選択されているカテゴリを保持
 
             System.out.println("[DEBUG] ページング・お気に入り実行: 現在ページ=" + currentPage + "/" + totalPages 
                     + " (総件数=" + totalTasks + "件, OFFSET=" + offset + ", お気に入り絞り込み=" + favoriteOnly + ")");

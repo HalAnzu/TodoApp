@@ -13,13 +13,21 @@
         h1 { margin: 0; font-size: 24px; color: #495057; }
         .user-info { font-size: 14px; color: #6c757d; }
         
+        /* ★追加：カテゴリ統計チップのコンテナとスタイル */
+        .category-stats-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .category-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: bold; text-decoration: none; background-color: #e9ecef; color: #495057; transition: all 0.2s; border: 1px solid #dee2e6; }
+        .category-chip:hover { background-color: #dee2e6; color: #212529; }
+        .category-chip.active { background-color: #28a745; color: #fff; border-color: #28a745; }
+        .category-chip .badge-count { margin-left: 6px; background-color: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 10px; font-size: 11px; }
+        .category-chip.active .badge-count { background-color: rgba(255,255,255,0.2); }
+
         /* 検索・ソート操作バー */
         .search-sort-bar { display: flex; justify-content: space-between; align-items: center; background-color: #f1f3f5; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; gap: 15px; }
         .search-form { display: flex; align-items: center; gap: 15px; flex-grow: 1; }
         .search-input { padding: 8px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 4px; width: 240px; box-sizing: border-box; }
         .search-input:focus { border-color: #80bdff; outline: none; }
         
-        /* ★追加：お気に入りフィルターのスタイル */
+        /* お気に入りフィルターのスタイル */
         .favorite-filter-label { font-size: 14px; color: #495057; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
         .favorite-filter-label input { width: 16px; height: 16px; cursor: pointer; }
 
@@ -50,17 +58,17 @@
         .task-table th, .task-table td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
         .task-table th { background-color: #f8f9fa; color: #495057; font-weight: bold; }
         
-        /* ★追加：お気に入り星ボタンのスタイル */
+        /* お気に入り星ボタンのスタイル */
         .title-cell { display: flex; align-items: center; gap: 8px; }
         .fav-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin: 0; line-height: 1; transition: transform 0.1s ease; outline: none; }
-        .fav-btn:active { transform: scale(1.3); } /* クリック時のポップ感を演出 */
-        .fav-active { color: #ffc107; }   /* お気に入りON：輝く黄色 ★ */
-        .fav-inactive { color: #ccc; }  /* お気に入りOFF：落ち着いたグレー ☆ */
+        .fav-btn:active { transform: scale(1.3); }
+        .fav-active { color: #ffc107; }
+        .fav-inactive { color: #ccc; }
         .fav-inactive:hover { color: #ffda6a; }
         
-        /* 複製ボタンのスタイル設定_追加機能 02 タスクコピー機能 */
-		.btn-copy { background-color: #17a2b8; color: #fff; padding: 5px 10px; font-size: 12px; border-radius: 4px; text-decoration: none; font-weight: bold; }
-		.btn-copy:hover { background-color: #138496; color: #fff; }
+        /* タスクコピー機能 */
+        .btn-copy { background-color: #17a2b8; color: #fff; padding: 5px 10px; font-size: 12px; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-copy:hover { background-color: #138496; color: #fff; }
 
         /* ステータスバッジ */
         .badge { display: inline-block; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 12px; text-align: center; }
@@ -68,11 +76,15 @@
         .badge-status-in_progress { background-color: #cce5ff; color: #004085; }
         .badge-status-completed { background-color: #d4edda; color: #155724; text-decoration: line-through; }
         
+        /* ★追加：一覧内でのカテゴリタグのスタイリング */
+        .tag-category { background-color: #e2f0d9; color: #385723; border: 1px solid #c5e0b4; }
+        .tag-uncategorized { background-color: #f2f2f2; color: #7f7f7f; border: 1px solid #d9d9d9; font-style: italic; }
+
         .empty-message { text-align: center; color: #868e96; padding: 40px; font-style: italic; font-size: 15px; background: #f8f9fa; border-radius: 6px; border: 1px dashed #dee2e6; }
         .action-cell { display: flex; gap: 8px; align-items: center; }
         .inline-form { margin: 0; padding: 0; display: inline; }
 
-        /* ページング（ナビゲーション）のスタイリング */
+        /* ページングのスタイリング */
         .pagination-container { display: flex; justify-content: center; align-items: center; margin-top: 10px; }
         .pagination { display: flex; list-style: none; padding: 0; margin: 0; gap: 5px; }
         .page-item { display: inline; }
@@ -106,9 +118,28 @@
         </div>
     </c:if>
 
+    <div class="category-stats-container">
+        <a href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}" 
+           class="category-chip ${empty selectedCategory ? 'active' : ''}">
+            すべて
+        </a>
+        
+        <c:forEach var="stat" items="${categoryStats}">
+            <c:set var="isUnclassified" value="${stat.key == '未分類'}" />
+            <c:set var="paramValue" value="${isUnclassified ? '_UNCLASSIFIED_' : stat.key}" />
+            
+            <a href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&category=<c:out value='${paramValue}'/>" 
+               class="category-chip ${selectedCategory == paramValue ? 'active' : ''}">
+                <c:out value="${stat.key}"/>
+                <span class="badge-count"><c:out value="${stat.value}"/></span>
+            </a>
+        </c:forEach>
+    </div>
+
     <div class="search-sort-bar">
         <form action="${pageContext.request.contextPath}/app/task/list" method="GET" class="search-form" id="searchForm">
             <input type="hidden" name="sort" value="<c:out value='${sort}'/>">
+            <input type="hidden" name="category" value="<c:out value='${selectedCategory}'/>">
             
             <input type="text" name="keyword" class="search-input" placeholder="タスク名で検索..." value="<c:out value='${keyword}'/>">
             
@@ -119,16 +150,16 @@
 
             <button type="submit" class="btn btn-primary">検索</button>
             
-            <c:if test="${not empty keyword || favoriteOnly}">
-                <a href="${pageContext.request.contextPath}/app/task/list?sort=<c:out value='${sort}'/>" class="btn btn-secondary">クリア</a>
+            <c:if test="${not empty keyword || favoriteOnly || not empty selectedCategory}">
+                <a href="${pageContext.request.contextPath}/app/task/list" class="btn btn-secondary">クリア</a>
             </c:if>
         </form>
         
         <div class="sort-links">
             作成日時:
-            <a href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=DESC&favoriteOnly=${favoriteOnly}" 
+            <a href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=DESC&favoriteOnly=${favoriteOnly}&category=<c:out value='${selectedCategory}'/>" 
                class="${sort == 'DESC' ? 'sort-active' : ''}">新しい順</a>
-            <a href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=ASC&favoriteOnly=${favoriteOnly}" 
+            <a href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=ASC&favoriteOnly=${favoriteOnly}&category=<c:out value='${selectedCategory}'/>" 
                class="${sort == 'ASC' ? 'sort-active' : ''}">古い順</a>
         </div>
     </div>
@@ -142,8 +173,9 @@
             <table class="task-table">
                 <thead>
                     <tr>
-                        <th style="width: 30%;">タイトル</th>
-                        <th style="width: 35%;">説明</th>
+                        <th style="width: 25%;">タイトル</th>
+                        <th style="width: 15%;">カテゴリ</th>
+                        <th style="width: 25%;">説明</th>
                         <th style="width: 15%;">ステータス</th>
                         <th style="width: 20%;">操作</th>
                     </tr>
@@ -166,6 +198,16 @@
                                     <strong><c:out value="${task.title}"/></strong>
                                 </div>
                             </td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${not empty task.category}">
+                                        <span class="badge tag-category"><c:out value="${task.category}"/></span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="badge tag-uncategorized">未分類</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </td>
                             <td><c:out value="${task.description}"/></td>
                             <td>
                                 <c:choose>
@@ -183,19 +225,19 @@
                                     </c:otherwise>
                                 </c:choose>
                             </td>
-							<td class="action-cell">
-							    <a href="${pageContext.request.contextPath}/app/task/copy?id=${task.id}" 
-							       class="btn btn-copy"
-							       onclick="return confirm('「<c:out value="${task.title}"/>」を複製しますか？');">複製</a>
-							
-							    <a href="${pageContext.request.contextPath}/app/task/edit?id=${task.id}" class="btn btn-edit">編集</a>
-							    
-							    <form action="${pageContext.request.contextPath}/app/task/delete" method="POST" class="inline-form" 
-							          onsubmit="return confirmDelete('<c:out value="${task.title}"/>');">
-							        <input type="hidden" name="id" value="${task.id}">
-							        <button type="submit" class="btn btn-delete">削除</button>
-							    </form>
-							</td>
+                            <td class="action-cell">
+                                <a href="${pageContext.request.contextPath}/app/task/copy?id=${task.id}" 
+                                   class="btn btn-copy"
+                                   onclick="return confirm('「<c:out value="${task.title}"/>」を複製しますか？');">複製</a>
+                            
+                                <a href="${pageContext.request.contextPath}/app/task/edit?id=${task.id}" class="btn btn-edit">編集</a>
+                                
+                                <form action="${pageContext.request.contextPath}/app/task/delete" method="POST" class="inline-form" 
+                                      onsubmit="return confirmDelete('<c:out value="${task.title}"/>');">
+                                    <input type="hidden" name="id" value="${task.id}">
+                                    <button type="submit" class="btn btn-delete">削除</button>
+                                </form>
+                            </td>
                         </tr>
                     </c:forEach>
                 </tbody>
@@ -206,19 +248,19 @@
                     
                     <c:if test="${currentPage > 1}">
                         <li class="page-item">
-                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&page=${currentPage - 1}">前へ</a>
+                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&category=<c:out value='${selectedCategory}'/>&page=${currentPage - 1}">前へ</a>
                         </li>
                     </c:if>
 
                     <c:forEach var="i" begin="1" end="${totalPages}">
                         <li class="page-item ${currentPage == i ? 'active' : ''}">
-                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&page=${i}">${i}</a>
+                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&category=<c:out value='${selectedCategory}'/>&page=${i}">${i}</a>
                         </li>
                     </c:forEach>
 
                     <c:if test="${currentPage < totalPages}">
                         <li class="page-item">
-                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&page=${currentPage + 1}">次へ</a>
+                            <a class="page-link" href="${pageContext.request.contextPath}/app/task/list?keyword=<c:out value='${keyword}'/>&sort=<c:out value='${sort}'/>&favoriteOnly=${favoriteOnly}&category=<c:out value='${selectedCategory}'/>&page=${currentPage + 1}">次へ</a>
                         </li>
                     </c:if>
                     
@@ -243,6 +285,11 @@
                         キーワード「<strong><c:out value="${keyword}"/></strong>」に一致するタスクが見つかりませんでした。
                     </div>
                 </c:when>
+                <c:when test="${not empty selectedCategory}">
+                    <div class="empty-message">
+                        選択されたカテゴリに該当するタスクはありません。
+                    </div>
+                </c:when>
                 <c:otherwise>
                     <div class="empty-message">
                         登録されているタスクはまだありません。上のボタンから新しいタスクを追加してみましょう！
@@ -255,24 +302,19 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // 画面上のすべての星ボタンを取得
     const favButtons = document.querySelectorAll(".fav-btn");
     
     favButtons.forEach(button => {
         button.addEventListener("click", function() {
             const taskId = this.getAttribute("data-task-id");
-            // 現在の状態の反対（反転）をターゲットにする
             const currentFav = this.getAttribute("data-favorite") === "true";
             const nextFav = !currentFav;
             
-            // サーバーの FavoriteToggleAction API のURLを構築
             const contextPath = "${pageContext.request.contextPath}";
             const url = contextPath + "/app/task/toggleFavorite?taskId=" + taskId + "&isFavorite=" + nextFav;
             
-            // ボタンを連打できないように一時的に無効化
             button.disabled = true;
             
-            // Fetch API を用いた非同期通信
             fetch(url, { method: "POST" })
                 .then(response => {
                     if (response.ok) {
@@ -285,10 +327,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 })
                 .then(text => {
                     if (text.trim() === "SUCCESS") {
-                        // 状態データの更新
                         this.setAttribute("data-favorite", nextFav ? "true" : "false");
                         
-                        // 見ためのデザインを即座に変更（★/☆、クラス切り替え）
                         if (nextFav) {
                             this.innerHTML = "★";
                             this.classList.remove("fav-inactive");
@@ -299,9 +339,6 @@ document.addEventListener("DOMContentLoaded", function() {
                             this.classList.remove("fav-active");
                             this.classList.add("fav-inactive");
                             this.title = "お気に入り登録";
-                            
-                            // 💡もし現在「お気に入りのみ表示」フィルターがONなら、解除された行は非同期で見えなくするとより親切
-                            // （今回はシンプルに状態切り替えのみに留めますが、ページリロード時に自動的に除外されます）
                         }
                     } else {
                         alert("処理に失敗しました。詳細: " + text);
@@ -312,7 +349,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     alert("エラーが発生しました。\n" + error.message);
                 })
                 .finally(() => {
-                    // 処理完了後にボタンを再有効化
                     button.disabled = false;
                 });
         });
