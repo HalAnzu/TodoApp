@@ -129,11 +129,19 @@ public class FrontController extends HttpServlet {
                     // レスポンスステータスを500に設定
                     response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                     
+                    // エラー情報をリクエスト属性に設定（JSPで表示可能に）
+                    request.setAttribute("errorException", e);
+                    request.setAttribute("errorMessage", e.getMessage());
+                    
                     // web.xmlを介さず、直接500.jspへ安全にフォワードする
                     request.getRequestDispatcher("/WEB-INF/views/error/500.jsp").forward(request, response);
+                } else {
+                    // レスポンスがコミット済みの場合はログのみ
+                    System.err.println("[FATAL ERROR] レスポンスがコミット済みのため、エラーページへのフォワードが不可能です。");
                 }
             } catch (Exception ex) {
                 System.err.println("[FATAL ERROR] エラー画面への遷移自体に失敗しました: " + ex.getMessage());
+                ex.printStackTrace();
             }
             return;
         }

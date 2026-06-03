@@ -70,7 +70,7 @@ public class Task implements Serializable {
     // ユーティリティメソッド
     @Override
     public String toString() {
-        return "Task{id=" + id + ", userId=" + userId + ", title='" + title + "', status='" + status + ", priority=\" + priority + \", category=\" + category + \"'}";
+        return "Task{id=" + id + ", userId=" + userId + ", title='" + title + "', status='" + status + "', priority='" + priority + "', category='" + category + "'}";
     }
 
     @Override

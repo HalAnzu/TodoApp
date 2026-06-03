@@ -42,7 +42,10 @@ public class FavoriteToggleAction extends BaseAuthAction {
         // 3. レスポンスの設定（軽量なプレーンテキストとして結果を返す）
         response.setContentType("text/plain;charset=UTF-8");
         
-        try (PrintWriter out = response.getWriter()) {
+        PrintWriter out = null;
+        try {
+            out = response.getWriter();
+            
             // 4. データベースの更新を実行（内部で他人のタスクを操作させない所有者チェックが走ります）
             boolean success = taskRepository.toggleFavorite(taskId, userId, isFavorite);
             
@@ -59,9 +62,14 @@ public class FavoriteToggleAction extends BaseAuthAction {
             System.err.println("[CRITICAL ERROR] お気に入り非同期更新中にデータベースエラーが発生しました。");
             e.printStackTrace();
             throw new ServletException("データベース処理中にエラーが発生しました。", e);
+        } finally {
+            // outがnullでない場合のみflush（複数呼び出し対策）
+            if (out != null) {
+                out.flush();
+            }
         }
 
         // ★ポイント：非同期通信用のレスポンスを独自に書き出したため、コントローラーにはnullを返してJSPへの遷移をスキップさせる
-        return null; 
+        return null;
     }
 }
