@@ -13,7 +13,7 @@ public class ConnectionFactory {
     private static final String DB_URL = 
         "jdbc:mysql://localhost:3306/taskmanager?characterEncoding=utf8&useUnicode=true&serverTimezone=Asia/Tokyo"; // [cite: 977, 1140]
     private static final String DB_USER = "root"; // 通常はroot（環境に合わせて変更してください） [cite: 978]
-    private static final String DB_PASSWORD = "hinaharu"; // ★ご自身のMySQLのrootパスワードを設定してください [cite: 979]
+    private static final String DB_PASSWORD = ""; // ★ご自身のMySQLのrootパスワードを設定してください [cite: 979]
     private static final String DB_DRIVER = "com.mysql.cj.jdbc.Driver"; // MySQL 8.0以降用ドライバー [cite: 980]
 
     // クラス読み込み時に一度だけドライバーをロードする
