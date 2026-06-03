@@ -105,7 +105,11 @@
         <div>
             <h1>マイタスク一覧</h1>
             <div class="user-info">
-                ログインユーザー: <strong><c:out value="${loginUser.username}"/></strong> さん
+               ログインユーザー: <strong><c:out value="${loginUser.username}"/></strong> さん
+                <a href="${pageContext.request.contextPath}/app/dashboard" class="btn btn-dashboard" 
+       				style="background: #2ecc71; color: #fff; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold; display: inline-flex; align-items: center; gap: 4px;">
+       				📊 統計
+    			</a>
                 <a href="${pageContext.request.contextPath}/app/logout" class="btn btn-logout">ログアウト</a>
             </div>
         </div>

@@ -122,6 +122,10 @@
         <a class="btn" style="background-color: #dc3545;" href="${pageContext.request.contextPath}/app/unknown_test_path">④ 404エラーテスト</a> 
         
         <a class="btn btn-success" href="${pageContext.request.contextPath}/app/task/list">📋 タスク一覧画面へ (/app/task/list)</a>
+        <a href="${pageContext.request.contextPath}/app/dashboard" class="btn" 
+		   style="background: #2ecc71; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-right: 10px; display: inline-block;">
+		   📊 ダッシュボード（統計画面）
+</a>
     </div>
 </div>
 
