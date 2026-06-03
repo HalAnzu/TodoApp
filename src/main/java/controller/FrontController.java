@@ -50,6 +50,10 @@ public class FrontController extends HttpServlet {
 
             actionMap.put("task/copy", new action.TaskCopyAction()); // 追加機能 02 タスクコピー機能
             
+            // ★追加機能 04：簡易統計機能（ダッシュボード）のActionを新しく登録！
+            // ※パスが正規化されて先頭の"/"が消えるため、キー名は "dashboard" にします。
+            actionMap.put("dashboard", new action.DashboardAction()); // "/app/dashboard" で呼び出し
+            
             System.out.println("[INFO] FrontController initialized with " + actionMap.size() + " actions.");
         } catch (Exception e) {
             System.err.println("[ERROR] Initialization failed: " + e.getMessage());
@@ -133,7 +137,7 @@ public class FrontController extends HttpServlet {
             }
             return;
         }
-    } // ★←ここ！消失していた processRequest を閉じる波カッコを追加しました
+    }
 
     /**
      * パス情報の正規化（先頭・末尾の"/"を除去し、空ならデフォルト値を返す）

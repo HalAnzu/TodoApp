@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import model.Task;
+import model.TaskStatistics;
 
 /**
  * tasksテーブルへのデータアクセスを担うクラス
@@ -465,4 +466,58 @@ public class TaskRepository extends BaseRepository {
         }
         return stats;
     }
-}
+    
+    /**
+     * 指定されたユーザーのタスク統計情報をまとめて取得する（簡易統計機能用）
+     */
+    public TaskStatistics getTaskStatistics(int userId) throws SQLException {
+        TaskStatistics stats = new TaskStatistics();
+        
+        // 1行でステータス別、優先度別、本日作成数をすべて集計するSQL
+        // データベース内の status/priority が大文字小文字混在していても安全なように LOWER() を適用
+        String sql = "SELECT "
+                   + "  COUNT(*) as total, "
+                   + "  COUNT(CASE WHEN LOWER(status) = 'completed' THEN 1 END) as completed, "
+                   + "  COUNT(CASE WHEN LOWER(status) = 'pending' THEN 1 END) as pending, "
+                   + "  COUNT(CASE WHEN LOWER(status) = 'in_progress' THEN 1 END) as in_progress, "
+                   + "  COUNT(CASE WHEN LOWER(priority) = 'low' THEN 1 END) as p_low, "
+                   + "  COUNT(CASE WHEN LOWER(priority) = 'medium' THEN 1 END) as p_medium, "
+                   + "  COUNT(CASE WHEN LOWER(priority) = 'high' THEN 1 END) as p_high, "
+                   + "  COUNT(CASE WHEN DATE(created_at) = CURRENT_DATE THEN 1 END) as today_created "
+                   + "FROM tasks "
+                   + "WHERE user_id = ?";
+
+        // ★修正：DBUtilではなく、クラス共通の getConnection() を使用するように変更
+        try (Connection conn = getConnection(); 
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int total = rs.getInt("total");
+                    int completed = rs.getInt("completed");
+                    
+                    stats.setTotalTasks(total);
+                    stats.setCompletedTasks(completed);
+                    stats.setPendingTasks(rs.getInt("pending"));
+                    stats.setInProgressTasks(rs.getInt("in_progress"));
+                    stats.setLowPriorityTasks(rs.getInt("p_low"));
+                    stats.setMediumPriorityTasks(rs.getInt("p_medium"));
+                    stats.setHighPriorityTasks(rs.getInt("p_high"));
+                    stats.setTodayCreatedTasks(rs.getInt("today_created"));
+                    
+                    // 0除算対策：タスク総数が0件の場合は完了率を0.0%にする
+                    if (total > 0) {
+                        double rate = ((double) completed / total) * 100.0;
+                        rate = Math.round(rate * 10.0) / 10.0; // 小数点第1位までに四捨五入
+                        stats.setCompletionRate(rate);
+                    } else {
+                        stats.setCompletionRate(0.0);
+                    }
+                }
+            }
+        } // ★閉じカッコの不整合を修正
+        return stats;
+    }
+} // クラスの閉じカッコ
