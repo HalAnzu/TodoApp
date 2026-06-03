@@ -33,9 +33,20 @@ public class TaskNewAction extends BaseAuthAction {
 
         if ("GET".equalsIgnoreCase(method)) {
             // ==========================================
-            // ① 画面表示処理 (GET)
+            // ① 新規登録画面の初期表示処理 (GET)
             // ==========================================
-            return "/WEB-INF/views/task/new.jsp";
+            
+            // ★追加：新規登録画面のドロップダウンに既存のカテゴリ一覧を表示する処理
+            try {
+                java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+                request.setAttribute("categoryStats", categoryStats);
+                System.out.println("[DEBUG] TaskNewAction(GET): 既存カテゴリ数をJSPに渡しました。");
+            } catch (java.sql.SQLException e) {
+                System.err.println("[ERROR] TaskNewAction(GET): カテゴリ統計の取得に失敗しました。");
+                e.printStackTrace();
+            }
+
+            return "/WEB-INF/views/task/new.jsp"; // ※環境に合わせてJSPのパスを確認してください
             
         } else if ("POST".equalsIgnoreCase(method)) {
             // ==========================================
@@ -96,17 +107,24 @@ public class TaskNewAction extends BaseAuthAction {
 
             // 3. エラーがあった場合は、入力値をすべて保持してフォーム画面に戻す
             if (!fieldErrors.isEmpty()) {
-                System.out.println("[WARN] TaskNewAction: バリデーションエラーを検知しました。エラー項目数: " + fieldErrors.size());
-                
-                // フィールド別のエラーマップをJSPに引き渡す
                 request.setAttribute("fieldErrors", fieldErrors);
                 
-                // 入力された値をすべてJSPに送り返す（選択状態・入力値保持機能に category も追加）
-                request.setAttribute("title", title);
-                request.setAttribute("description", description);
-                request.setAttribute("status", status);
-                request.setAttribute("priority", priority);
-                request.setAttribute("category", category); // ★追加：入力されたカテゴリを保持
+                // ★修正：エラー時に入力内容がフォームから消えないよう、dummyTaskオブジェクトを正しく作成してJSPに渡す
+                Task dummyTask = new Task();
+                dummyTask.setTitle(title);
+                dummyTask.setDescription(description);
+                dummyTask.setStatus(status);
+                dummyTask.setPriority(priority);
+                dummyTask.setCategory(category); // エラー時も入力されたカテゴリ（または手入力値）を保持
+                request.setAttribute("task", dummyTask);
+                
+                // ★追加：エラーで新規画面に戻る際にも、既存カテゴリの選択肢を再セット
+                try {
+                    java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+                    request.setAttribute("categoryStats", categoryStats);
+                } catch (java.sql.SQLException e) {
+                    e.printStackTrace();
+                }
                 
                 return "/WEB-INF/views/task/new.jsp";
             }

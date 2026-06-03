@@ -436,8 +436,8 @@ public class TaskRepository extends BaseRepository {
     }
 
     /**
-     * ★新規追加：画面上部のチップ表示用。ログインユーザーが保有するカテゴリ別のタスク件数を集計する
-     * @return カテゴリ名とその件数のマップ（未分類は除外、または集計用に割り当てる）
+     * ★修正版：画面上部のチップ表示用。ログインユーザーが保有するカテゴリ別のタスク件数を集計する
+     * データベース内の NULL, 空文字、"未分類" をすべて「未分類」に統一して正確にマージします。
      */
     public Map<String, Integer> getCategoryStats(int userId) throws SQLException {
         Map<String, Integer> stats = new HashMap<>();
@@ -451,10 +451,14 @@ public class TaskRepository extends BaseRepository {
                 while (rs.next()) {
                     String category = rs.getString("category");
                     int count = rs.getInt("cnt");
-                    // データベースでNULLまたは空文字のものはJava側で「未分類」として統一して集計
-                    if (category == null || category.trim().isEmpty()) {
+                    
+                    // NULL、空文字、または文字列としての"未分類"、JSPから戻ってくる可能性のある値すべてを「未分類」として統一
+                    if (category == null || category.trim().isEmpty() || "未分類".equals(category.trim()) || "_UNCLASSIFIED_".equals(category.trim())) {
                         category = "未分類";
+                    } else {
+                        category = category.trim();
                     }
+                    
                     stats.put(category, stats.getOrDefault(category, 0) + count);
                 }
             }

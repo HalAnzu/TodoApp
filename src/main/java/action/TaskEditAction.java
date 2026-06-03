@@ -65,9 +65,22 @@ public class TaskEditAction extends BaseAuthAction {
 
             // JSPに既存のタスクデータ（追加した category も内包されています）を渡す
             request.setAttribute("task", task);
+
+            // ★追加：編集画面のドロップダウンに過去の既存カテゴリ一覧を表示するために必須の処理
+            try {
+                java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+                request.setAttribute("categoryStats", categoryStats);
+                System.out.println("[DEBUG] TaskEditAction(GET): 既存カテゴリ数をJSPに渡しました。件数 = " + (categoryStats != null ? categoryStats.size() : 0));
+            } catch (java.sql.SQLException e) {
+                System.err.println("[ERROR] TaskEditAction(GET): カテゴリ統計の取得に失敗しました。");
+                e.printStackTrace();
+            }
+
             return "/WEB-INF/views/task/edit.jsp";
             
-        } else if ("POST".equalsIgnoreCase(method)) {
+        }
+        	else if ("POST".equalsIgnoreCase(method)) {
+        		
             // ==========================================
             // ② データベース更新処理 (POST)
             // ==========================================
@@ -139,7 +152,17 @@ public class TaskEditAction extends BaseAuthAction {
                 dummyTask.setPriority(priority); // 優先度を保持
                 dummyTask.setCategory(category); // ★追加：エラー時も入力されたカテゴリを保持
                 
+             // （省略）既存のエラー処理
                 request.setAttribute("task", dummyTask);
+                
+                // ★追加：バリデーションエラーで画面に戻る際にも、既存カテゴリの選択肢を再セット
+                try {
+                    java.util.Map<String, Integer> categoryStats = taskRepository.getCategoryStats(loginUser.getId());
+                    request.setAttribute("categoryStats", categoryStats);
+                } catch (java.sql.SQLException e) {
+                    e.printStackTrace();
+                }
+                
                 return "/WEB-INF/views/task/edit.jsp";
             }
 
@@ -164,7 +187,8 @@ public class TaskEditAction extends BaseAuthAction {
                 session.setAttribute("flash_success", "タスク「" + title + "」を更新しました！");
                 
                 return "redirect:/app/task/list";
-            } else {
+            } 
+            else {
                 throw new ServletException("データベースのタスク更新処理に失敗しました。");
             }
         }

@@ -135,35 +135,46 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const categorySelect = document.getElementById("categorySelect");
-    const newCategoryGroup = document.getElementById("newCategoryGroup");
-    const newCategoryInput = document.getElementById("newCategoryInput");
+(function() {
+    document.addEventListener("DOMContentLoaded", function() {
+        const categorySelect = document.getElementById("categorySelect");
+        const newCategoryGroup = document.getElementById("newCategoryGroup");
+        const newCategoryInput = document.getElementById("newCategoryInput");
+        const form = categorySelect.closest("form");
 
-    function toggleCategoryMode() {
-        if (categorySelect.value === "__NEW_CATEGORY__") {
-            // 「新しく入力する」が選ばれたらテキストボックスを表示
-            newCategoryGroup.style.display = "block";
-            // サーバーへテキストボックスの値を送信するため、name属性をこちらに付与
-            newCategoryInput.name = "category";
-            // 代わりにセレクトボックスのnameを一時的に外す（多重送信の防止）
-            categorySelect.removeAttribute("name");
-        } else {
-            // 既存カテゴリ選択、または未分類の場合はテキストボックスを隠す
-            newCategoryGroup.style.display = "none";
-            // セレクトボックスの値を送信するため、name属性を戻す
-            categorySelect.name = "category";
-            newCategoryInput.removeAttribute("removeAttribute");
-            newCategoryInput.removeAttribute("name");
+        if (!categorySelect || !newCategoryGroup || !newCategoryInput || !form) return;
+
+        // 1. セレクトボックスの選択状態に合わせてテキスト入力欄の表示/非表示を切り替える
+        function toggleCategoryMode() {
+            if (categorySelect.value === "__NEW_CATEGORY__") {
+                newCategoryGroup.style.display = "block";
+            } else {
+                newCategoryGroup.style.display = "none";
+            }
         }
-    }
 
-    // イベントリスナーの登録（変更時に毎回切り替える）
-    categorySelect.addEventListener("change", toggleCategoryMode);
+        categorySelect.addEventListener("change", toggleCategoryMode);
+        toggleCategoryMode(); // 初期表示時の再現
 
-    // 初期化処理：初期表示時、あるいはバリデーションエラーによる画面戻り時の状態を正しく再現する
-    toggleCategoryMode();
-});
+        // 2. 【最重要】送信される瞬間に、手入力された値をセレクトボックスにコピーする
+        form.addEventListener("submit", function(e) {
+            if (categorySelect.value === "__NEW_CATEGORY__") {
+                const rawValue = newCategoryInput.value.trim();
+                if (rawValue !== "") {
+                    // セレクトボックスに新しいダミーの選択肢（option）を生成して選択状態にする
+                    const opt = document.createElement("option");
+                    opt.value = rawValue;
+                    opt.textContent = rawValue;
+                    opt.selected = true;
+                    categorySelect.appendChild(opt);
+                } else {
+                    // 空欄の場合は「未分類」として送信させる
+                    categorySelect.value = "";
+                }
+            }
+        });
+    });
+})();
 </script>
 
 </body>

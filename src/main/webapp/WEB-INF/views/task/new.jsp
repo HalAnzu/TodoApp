@@ -56,36 +56,33 @@
 
         <div class="form-group">
             <label for="categorySelect">カテゴリ<span class="text-muted" style="font-size:12px; font-weight:normal; color:#6c757d;">（任意：50文字以内）</span></label>
-            <div class="category-select-wrapper">
-                
-                <c:set var="isExistingCategory" value="false" />
-                <c:if var="hasCategoryValue" test="${not empty category}">
-                    <c:forEach var="stat" items="${categoryStats}">
-                        <c:if test="${stat.key == category}"><c:set var="isExistingCategory" value="true" /></c:if>
-                    </c:forEach>
-                </c:if>
-
-                <select id="categorySelect" name="category" class="${not empty fieldErrors.category ? 'input-error' : ''}">
-                    <option value="" <c:if test="${empty category}">selected</c:if>>-- 未分類 --</option>
-                    
-                    <c:forEach var="stat" items="${categoryStats}">
-                        <c:if test="${stat.key != '未分類'}">
-                            <option value="<c:out value='${stat.key}'/>" <c:if test="${category == stat.key}">selected</c:if>>
-                                <c:out value="${stat.key}"/>
-                            </option>
-                        </c:if>
-                    </c:forEach>
-                    
-                    <option value="__NEW_CATEGORY__" <c:if test="${hasCategoryValue && !isExistingCategory}">selected</c:if>>（＋新しく入力する）</option>
-                </select>
-
-                <div id="newCategoryGroup" class="new-category-input-group">
-                    <input type="text" id="newCategoryInput" 
-                           class="${not empty fieldErrors.category ? 'input-error' : ''}"
-                           placeholder="新しいカテゴリ名を入力してください" 
-                           value="<c:out value='${!isExistingCategory ? category : \"\"}'/>">
-                </div>
-            </div>
+			<div class="category-select-wrapper">
+			    
+			    <select id="categorySelect" name="category" class="${not empty fieldErrors.category ? 'input-error' : ''}">
+			        <%-- タスクのカテゴリが空（未分類）ならこれを選択 --%>
+			        <option value="" ${empty task.category ? 'selected' : ''}>-- 未分類 --</option>
+			        
+			        <%-- 既存のカテゴリ一覧をループ --%>
+			        <c:forEach var="stat" items="${categoryStats}">
+			            <c:if test="${stat.key != '未分類'}">
+			                <%-- タスクに登録されているカテゴリと一致したら selected にする --%>
+			                <option value="<c:out value='${stat.key}'/>" ${task.category == stat.key ? 'selected' : ''}>
+			                    <c:out value="${stat.key}"/>
+			                </option>
+			            </c:if>
+			        </c:forEach>
+			        
+			        <%-- 手入力用オプション（初期表示時は selected にしない。新しく入力するときだけユーザーが選ぶ） --%>
+			        <option value="__NEW_CATEGORY__">（＋新しく入力する）</option>
+			    </select>
+			
+			    <div id="newCategoryGroup" class="new-category-input-group">
+			        <input type="text" id="newCategoryInput" 
+			               class="${not empty fieldErrors.category ? 'input-error' : ''}"
+			               placeholder="新しいカテゴリ名を入力してください" 
+			               value="">
+			    </div>
+			</div>>
             
             <c:forEach var="err" items="${fieldErrors.category}">
                 <div class="error-message">⚠️ <c:out value="${err}"/></div>
@@ -134,34 +131,46 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const categorySelect = document.getElementById("categorySelect");
-    const newCategoryGroup = document.getElementById("newCategoryGroup");
-    const newCategoryInput = document.getElementById("newCategoryInput");
+(function() {
+    document.addEventListener("DOMContentLoaded", function() {
+        const categorySelect = document.getElementById("categorySelect");
+        const newCategoryGroup = document.getElementById("newCategoryGroup");
+        const newCategoryInput = document.getElementById("newCategoryInput");
+        const form = categorySelect.closest("form");
 
-    function toggleCategoryMode() {
-        if (categorySelect.value === "__NEW_CATEGORY__") {
-            // 「新しく入力する」が選ばれたらテキストボックスを表示
-            newCategoryGroup.style.display = "block";
-            // サーバーへテキストボックスの値を送信するため、name属性をこちらに付与
-            newCategoryInput.name = "category";
-            // 代わりにセレクトボックスのnameを一時的に外す（多重送信の防止）
-            categorySelect.removeAttribute("name");
-        } else {
-            // 既存カテゴリ選択、または未分類の場合はテキストボックスを隠す
-            newCategoryGroup.style.display = "none";
-            // セレクトボックスの値を送信するため、name属性を戻す
-            categorySelect.name = "category";
-            newCategoryInput.removeAttribute("name");
+        if (!categorySelect || !newCategoryGroup || !newCategoryInput || !form) return;
+
+        // 1. セレクトボックスの選択状態に合わせてテキスト入力欄の表示/非表示を切り替える
+        function toggleCategoryMode() {
+            if (categorySelect.value === "__NEW_CATEGORY__") {
+                newCategoryGroup.style.display = "block";
+            } else {
+                newCategoryGroup.style.display = "none";
+            }
         }
-    }
 
-    // イベントリスナーの登録（変更時に毎回切り替える）
-    categorySelect.addEventListener("change", toggleCategoryMode);
+        categorySelect.addEventListener("change", toggleCategoryMode);
+        toggleCategoryMode(); // 初期表示時の再現
 
-    // 初期化処理：エラーによる画面戻り時の状態を正しく再現する
-    toggleCategoryMode();
-});
+        // 2. 【最重要】送信される瞬間に、手入力された値をセレクトボックスにコピーする
+        form.addEventListener("submit", function(e) {
+            if (categorySelect.value === "__NEW_CATEGORY__") {
+                const rawValue = newCategoryInput.value.trim();
+                if (rawValue !== "") {
+                    // セレクトボックスに新しいダミーの選択肢（option）を生成して選択状態にする
+                    const opt = document.createElement("option");
+                    opt.value = rawValue;
+                    opt.textContent = rawValue;
+                    opt.selected = true;
+                    categorySelect.appendChild(opt);
+                } else {
+                    // 空欄の場合は「未分類」として送信させる
+                    categorySelect.value = "";
+                }
+            }
+        });
+    });
+})();
 </script>
 
 </body>
