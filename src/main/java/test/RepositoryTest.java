@@ -13,7 +13,7 @@ import repository.UserRepository;
 public class RepositoryTest {
 
     public static void main(String[] args) {
-        System.out.println("=== TodoApp Repository層 動作確認テスト開始 ===");
+        System.out.println("=== TaskManager Repository層 動作確認テスト開始 ===");
 
         // 1. UserRepository のテスト
         System.out.println("\n--- [TEST] UserRepository.findAll() ---");
@@ -45,6 +45,6 @@ public class RepositoryTest {
             System.out.println("[DTO検証] タスク名: " + t.getTitle() + " | ステータス: " + t.getStatus());
         }
 
-        System.out.println("\n=== TodoApp Repository層 動作確認テスト終了 ===");
+        System.out.println("\n=== TaskManager Repository層 動作確認テスト終了 ===");
     }
 }

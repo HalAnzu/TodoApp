@@ -4,7 +4,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>タスク編集 - TodoApp</title>
+    <title>タスク編集 - TaskManager</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -97,7 +97,7 @@
             <label for="status">ステータス<span class="required">（必須）</span></label>
             <select id="status" name="status" class="${not empty fieldErrors.status ? 'input-error' : ''}">
                 <option value="pending" ${task.status == 'pending' ? 'selected' : ''}>未着手</option>
-                <option value="in_progress" ${task.status == 'in_progress' ? 'selected' : ''}>着手中</option>
+                <option value="in_progress" ${task.status == 'in_progress' ? 'selected' : ''}>進行中</option>
                 <option value="completed" ${task.status == 'completed' ? 'selected' : ''}>完了</option>
             </select>
             <c:forEach var="err" items="${fieldErrors.status}">

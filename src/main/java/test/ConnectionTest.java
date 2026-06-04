@@ -14,7 +14,7 @@ import database.ConnectionFactory;
 public class ConnectionTest {
 
     public static void main(String[] args) {
-        System.out.println("=== TodoApp データベース接続テスト開始 ===");
+        System.out.println("=== TaskManager データベース接続テスト開始 ===");
 
         // try-with-resources により、Connection、PreparedStatement、ResultSet は自動クローズされます
         try (Connection conn = ConnectionFactory.getConnection()) { // [cite: 1154]
@@ -69,6 +69,6 @@ public class ConnectionTest {
             e.printStackTrace();
         }
         
-        System.out.println("\n=== TodoApp データベース接続テスト終了 ===");
+        System.out.println("\n=== TaskManager データベース接続テスト終了 ===");
     }
 }

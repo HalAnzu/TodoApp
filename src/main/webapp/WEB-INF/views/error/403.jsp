@@ -3,7 +3,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>アクセス権限エラー - TodoApp</title>
+    <title>アクセス権限エラー - TaskManager</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; color: #333; text-align: center; padding: 50px; }
         .error-container { background: #fff; max-width: 500px; margin: 60px auto; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }

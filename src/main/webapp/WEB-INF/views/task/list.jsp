@@ -4,7 +4,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>タスク一覧 - TodoApp</title>
+    <title>タスク一覧 - TaskManager</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -170,9 +170,27 @@
 
     <c:choose>
         <c:when test="${not empty tasks}">
-            <div class="result-count">
-                該当件数: <c:out value="${totalTasks}"/> 件 （<c:out value="${currentPage}"/> / <c:out value="${totalPages}"/> ページ）
-            </div>
+			<div class="result-count">
+			    <c:choose>
+			        <c:when test="${totalTasks > 0}">
+			            <%-- 1ページあたりの件数（pageSize）が5件の場合の計算 --%>
+			            <c:set var="pageSize" value="5" />
+			            <c:set var="startItem" value="${(currentPage - 1) * pageSize + 1}" />
+			            <c:set var="endItem" value="${currentPage * pageSize}" />
+			            <%-- 最終ページの帳尻合わせ（総件数を超えないようにする） --%>
+			            <c:if test="${endItem > totalTasks}">
+			                <c:set var="endItem" value="${totalTasks}" />
+			            </c:if>
+			            
+			            全 <strong><c:out value="${totalTasks}"/></strong> 件中 
+			            <strong><c:out value="${startItem}"/> - <c:out value="${endItem}"/></strong> 件目を表示
+			            （<c:out value="${currentPage}"/> / <c:out value="${totalPages}"/> ページ）
+			        </c:when>
+			        <c:otherwise>
+			            該当するタスクはありません。
+			        </c:otherwise>
+			    </c:choose>
+			</div>
             
             <table class="task-table">
                 <thead>
@@ -219,7 +237,7 @@
                                         <span class="badge badge-status-pending">未着手</span>
                                     </c:when>
                                     <c:when test="${task.status == 'in_progress'}">
-                                        <span class="badge badge-status-in_progress">着手中</span>
+                                        <span class="badge badge-status-in_progress">進行中</span>
                                     </c:when>
                                     <c:when test="${task.status == 'completed'}">
                                         <span class="badge badge-status-completed">完了</span>

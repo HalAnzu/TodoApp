@@ -4,7 +4,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>新規タスク登録 - TodoApp</title>
+    <title>新規タスク登録 - TaskManager</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -103,7 +103,7 @@
             <label for="status">ステータス<span class="required">（必須）</span></label>
             <select id="status" name="status" class="${not empty fieldErrors.status ? 'input-error' : ''}">
                 <option value="pending" <c:if test="${empty status || status == 'pending'}">selected</c:if>>未着手</option>
-                <option value="in_progress" <c:if test="${status == 'in_progress'}">selected</c:if>>着手中</option>
+                <option value="in_progress" <c:if test="${status == 'in_progress'}">selected</c:if>>進行中</option>
                 <option value="completed" <c:if test="${status == 'completed'}">selected</c:if>>完了</option>
             </select>
             <c:forEach var="err" items="${fieldErrors.status}">

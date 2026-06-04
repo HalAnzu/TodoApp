@@ -205,10 +205,12 @@ public class TaskRepository extends BaseRepository {
     
     /**
      * 既存のタスク情報を更新する（所有者チェック付き）
+     * ★お気に入り状態（is_favorite）は専用メソッド（toggleFavorite）で管理するため、
+     * 通常のタスク編集処理のSQL更新対象からは安全のために除外します。
      */
     public boolean update(Task task) {
-        // ★修正：更新処理時に category カラムも更新対象に含める
-        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, is_favorite = ?, category = ?, updated_at = NOW() "
+        // ★修正：is_favorite = ? をSQLから完全に除外
+        String sql = "UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, category = ?, updated_at = NOW() "
                    + "WHERE task_id = ? AND user_id = ?";
         
         try (Connection conn = getConnection();
@@ -218,10 +220,9 @@ public class TaskRepository extends BaseRepository {
             ps.setString(2, task.getDescription());
             ps.setString(3, task.getStatus());
             ps.setString(4, task.getPriority());
-            ps.setBoolean(5, task.isFavorite());
-            ps.setString(6, task.getCategory()); // ★追加：カテゴリの更新
-            ps.setInt(7, task.getId());
-            ps.setInt(8, task.getUserId());
+            ps.setString(5, task.getCategory()); // ★インデックスを5に変更（カテゴリの更新）
+            ps.setInt(6, task.getId());          // ★インデックスを6に変更（WHERE句のtask_id）
+            ps.setInt(7, task.getUserId());      // ★インデックスを7に変更（WHERE句のuser_id）
             
             int updatedRows = ps.executeUpdate();
             System.out.println("[DEBUG] TaskRepository.update: 影響した行数 = " + updatedRows);

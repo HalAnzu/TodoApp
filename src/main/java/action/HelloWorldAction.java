@@ -22,14 +22,14 @@ public class HelloWorldAction extends BaseAuthAction {
         
         // 1. パラメータ処理 (name属性の取得とヌルチェック)
         String name = request.getParameter("name");
-        String message = "Welcome to TodoApp!";
+        String message = "Welcome to TaskManager!";
         
         // もしリクエストパラメータにnameがなければ、ログインしたユーザーの名前をデフォルトにする仕様に拡張
         if (name == null || name.trim().isEmpty()) {
             name = loginUser.getUsername();
         }
         
-        message = "こんにちは、" + name + " さん！TodoAppへようこそ！";
+        message = "こんにちは、" + name + " さん！TaskManagerへようこそ！";
         
         // 2. 表示用データの準備とリクエストスコープへのバインド
         request.setAttribute("message", message);

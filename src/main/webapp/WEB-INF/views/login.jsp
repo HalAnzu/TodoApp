@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TodoApp - ログイン</title>
+    <title>TaskManager - ログイン</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -83,7 +83,7 @@
 <body>
 
 <div class="login-container">
-    <h2>TodoApp ログイン</h2>
+    <h2>TaskManager ログイン</h2>
     
     <c:if test="${not empty errorMessage}">
         <div class="error-message">
