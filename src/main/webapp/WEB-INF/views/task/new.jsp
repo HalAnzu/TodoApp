@@ -82,7 +82,7 @@
 			               placeholder="新しいカテゴリ名を入力してください" 
 			               value="">
 			    </div>
-			</div>>
+			</div>
             
             <c:forEach var="err" items="${fieldErrors.category}">
                 <div class="error-message">⚠️ <c:out value="${err}"/></div>
